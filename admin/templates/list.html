@@ -1,0 +1,166 @@
+{{define "content"}}
+{{$page := .Page}}
+<div x-data="selection()" @htmx:after-swap.window="clear()">
+  <div class="mb-6 flex flex-wrap items-center gap-4">
+    <span class="grid size-11 place-items-center rounded-xl bg-indigo-50 text-indigo-600 ring-1 ring-indigo-100 dark:bg-indigo-500/10 dark:text-indigo-300 dark:ring-indigo-500/20">{{icon $page.Meta.Icon "size-5"}}</span>
+    <div class="min-w-0 flex-1">
+      <p class="text-xs font-medium tracking-wide text-zinc-500 uppercase">{{$page.Meta.App}}</p>
+      <h1 class="flex items-center gap-3 text-2xl font-semibold tracking-tight">{{$page.Meta.Plural}}
+        <span class="rounded-full bg-zinc-100 px-2.5 py-0.5 text-xs font-medium text-zinc-600 tabular-nums dark:bg-zinc-800 dark:text-zinc-300">{{$page.Total}}</span>
+      </h1>
+    </div>
+    {{if $page.Meta.AddURL}}<a href="{{$page.Meta.AddURL}}" class="button button-primary">{{icon "plus"}} Add {{$page.Meta.Label}}</a>{{end}}
+  </div>
+
+  <div class="mb-4 flex flex-wrap items-center gap-3" hx-boost="true" hx-target="#main" hx-select="#main" hx-swap="outerHTML">
+    {{if $page.HasSearch}}
+    <div class="relative min-w-64 flex-1 sm:max-w-sm">
+      <span class="pointer-events-none absolute inset-y-0 left-3 flex items-center text-zinc-400">{{icon "search"}}</span>
+      <input type="search" name="q" value="{{$page.Search}}" placeholder="Search {{$page.Meta.Plural}}…" autocomplete="off"
+             hx-get="{{$page.ListURL}}" hx-trigger="input changed delay:300ms, search" hx-target="#results" hx-select="#results"
+             hx-swap="outerHTML" hx-push-url="true" hx-include="[data-list-state]" hx-indicator="#search-spinner"
+             class="input pl-9">
+      <span id="search-spinner" class="htmx-indicator absolute inset-y-0 right-3 flex items-center">
+        <span class="size-4 animate-spin rounded-full border-2 border-zinc-300 border-t-indigo-500"></span>
+      </span>
+    </div>
+    {{end}}
+    {{range $page.Filters}}
+    <div x-data="{ open: false }" class="relative" @click.outside="open = false">
+      <button type="button" @click="open = !open" class="button {{if .Active}}bg-indigo-50 text-indigo-700 ring-1 ring-indigo-200 ring-inset dark:bg-indigo-500/10 dark:text-indigo-300 dark:ring-indigo-500/30{{else}}button-secondary{{end}}">
+        {{icon "filter" "size-3.5"}} {{.Label}} <span class="text-zinc-400">{{icon "chevron-down" "size-3.5"}}</span>
+      </button>
+      <div x-cloak x-show="open" x-transition.origin.top.left class="absolute left-0 z-20 mt-2 max-h-80 w-56 overflow-y-auto rounded-xl bg-white p-1.5 shadow-lg ring-1 ring-zinc-950/10 dark:bg-zinc-900 dark:ring-white/10">
+        {{range .Options}}
+        <a href="{{.URL}}" class="flex items-center justify-between rounded-lg px-3 py-2 text-sm {{if .Active}}bg-indigo-50 font-medium text-indigo-700 dark:bg-indigo-500/10 dark:text-indigo-300{{else}}text-zinc-700 hover:bg-zinc-50 dark:text-zinc-300 dark:hover:bg-zinc-800{{end}}">
+          <span class="truncate">{{.Label}}</span>{{if .Active}}{{icon "check" "size-3.5"}}{{end}}
+        </a>
+        {{end}}
+      </div>
+    </div>
+    {{end}}
+    {{if $page.ActiveFilters}}
+    <div class="flex flex-wrap items-center gap-2">
+      {{range $page.ActiveFilters}}
+      <a href="{{.RemoveURL}}" class="inline-flex items-center gap-1.5 rounded-full bg-zinc-900 py-1 pr-2 pl-3 text-xs font-medium text-white hover:bg-zinc-700 dark:bg-white dark:text-zinc-900 dark:hover:bg-zinc-200">{{.Label}} {{icon "x" "size-3"}}</a>
+      {{end}}
+      <a href="{{$page.ClearURL}}" class="text-xs font-medium text-zinc-500 hover:text-zinc-900 dark:hover:text-white">Clear all</a>
+    </div>
+    {{end}}
+  </div>
+
+  {{template "results" .}}
+
+  <div x-cloak x-show="selected.length > 0" x-transition class="fixed inset-x-0 bottom-6 z-30 mx-auto flex w-fit items-center gap-4 rounded-2xl bg-zinc-900 py-2 pr-2 pl-5 text-sm text-white shadow-2xl ring-1 ring-white/10 dark:bg-white dark:text-zinc-900">
+    <span><span class="font-semibold tabular-nums" x-text="selected.length"></span> selected</span>
+    <button type="button" class="button px-3 py-1.5 text-zinc-300 hover:text-white dark:text-zinc-600 dark:hover:text-zinc-900" @click="clear()">Clear</button>
+    {{if $page.Meta.Permissions.Delete}}
+    <button type="button" class="button button-danger px-3 py-1.5"
+            data-title="Delete selected {{$page.Meta.Plural}}?" data-action="{{$page.BulkDeleteURL}}"
+            @click="$store.confirm.ask({title: $el.dataset.title, message: 'Only the items you are allowed to delete will be removed. This cannot be undone.', action: $el.dataset.action + window.location.search, ids: [...selected]})">
+      {{icon "trash" "size-3.5"}} Delete
+    </button>
+    {{end}}
+  </div>
+</div>
+{{end}}
+
+{{define "results"}}
+{{$page := .Page}}
+<div id="results">
+  <div class="card overflow-hidden">
+    {{if $page.Rows}}
+    <div class="overflow-x-auto">
+      <table class="min-w-full text-sm">
+        <thead class="border-b border-zinc-200 bg-zinc-50/80 text-left text-xs font-medium text-zinc-500 dark:border-zinc-800 dark:bg-zinc-900/60 dark:text-zinc-400">
+          <tr>
+            {{if $page.Meta.Permissions.Delete}}
+            <th class="w-10 py-3 pl-4"><input type="checkbox" :checked="allChecked()" @change="toggleAll($event)" class="size-4 rounded border-zinc-300 text-indigo-600 focus:ring-indigo-500 dark:border-zinc-600 dark:bg-zinc-800"></th>
+            {{end}}
+            {{range $page.Headers}}
+            <th class="px-4 py-3 whitespace-nowrap">
+              {{if .Sortable}}
+              <a href="{{.SortURL}}" hx-get="{{.SortURL}}" hx-target="#results" hx-select="#results" hx-swap="outerHTML" hx-push-url="true"
+                 class="group inline-flex items-center gap-1 hover:text-zinc-900 dark:hover:text-white {{if .Sorted}}text-zinc-900 dark:text-white{{end}}">
+                {{.Label}}
+                <span class="{{if .Sorted}}text-indigo-500{{else}}text-zinc-300 opacity-0 group-hover:opacity-100 dark:text-zinc-600{{end}}">
+                  {{if .Sorted}}{{if .Descending}}{{icon "chevron-down" "size-3.5"}}{{else}}{{icon "chevron-up" "size-3.5"}}{{end}}{{else}}{{icon "chevrons-sort" "size-3.5"}}{{end}}
+                </span>
+              </a>
+              {{else}}{{.Label}}{{end}}
+            </th>
+            {{end}}
+            <th class="w-24 px-4 py-3"><span class="sr-only">Actions</span></th>
+          </tr>
+        </thead>
+        <tbody class="divide-y divide-zinc-100 dark:divide-zinc-800">
+          {{range $row := $page.Rows}}
+          <tr class="group transition hover:bg-zinc-50/80 dark:hover:bg-zinc-800/40" :class="selected.includes('{{$row.ID}}') && 'bg-indigo-50/60 dark:bg-indigo-500/5'">
+            {{if $page.Meta.Permissions.Delete}}
+            <td class="py-3 pl-4">
+              {{if $row.CanDelete}}<input type="checkbox" data-row value="{{$row.ID}}" x-model="selected" class="size-4 rounded border-zinc-300 text-indigo-600 focus:ring-indigo-500 dark:border-zinc-600 dark:bg-zinc-800">{{end}}
+            </td>
+            {{end}}
+            {{range $index, $cell := $row.Cells}}
+            <td class="max-w-xs truncate px-4 py-3 {{if eq $index 0}}font-medium{{else}}text-zinc-600 dark:text-zinc-300{{end}}">
+              {{if eq $index 0}}<a href="{{$row.URL}}" class="text-zinc-900 hover:text-indigo-600 dark:text-white dark:hover:text-indigo-400">{{if eq $cell.Kind "null"}}#{{$row.ID}}{{else}}{{$cell.Text}}{{end}}</a>{{else}}{{template "cell" $cell}}{{end}}
+            </td>
+            {{end}}
+            <td class="px-4 py-3">
+              <div class="flex justify-end gap-1 opacity-60 transition group-hover:opacity-100">
+                {{if $row.CanChange}}
+                <a href="{{$row.URL}}" title="Edit" class="button button-ghost p-1.5">{{icon "pencil"}}</a>
+                {{else}}
+                <a href="{{$row.URL}}" title="View" class="button button-ghost p-1.5">{{icon "eye"}}</a>
+                {{end}}
+                {{if $row.CanDelete}}
+                <button type="button" title="Delete" class="button button-ghost p-1.5 hover:text-rose-600 dark:hover:text-rose-400"
+                        data-action="{{$row.DeleteURL}}" data-label="{{(index $row.Cells 0).Text}}"
+                        @click="$store.confirm.ask({title: 'Delete “' + $el.dataset.label + '”?', message: 'This cannot be undone.', action: $el.dataset.action})">{{icon "trash"}}</button>
+                {{end}}
+              </div>
+            </td>
+          </tr>
+          {{end}}
+        </tbody>
+      </table>
+    </div>
+    {{else}}
+    <div class="grid place-items-center px-6 py-16 text-center">
+      <span class="text-zinc-300 dark:text-zinc-600">{{icon "inbox" "size-10"}}</span>
+      <p class="mt-4 font-medium">No {{$page.Meta.Plural}} found</p>
+      <p class="mt-1 text-sm text-zinc-500">{{if or $page.Search $page.ActiveFilters}}Try a different search or clear the filters.{{else}}Nothing here yet.{{end}}</p>
+      {{if and $page.Meta.AddURL (not (or $page.Search $page.ActiveFilters))}}<a href="{{$page.Meta.AddURL}}" class="button button-primary mt-6">{{icon "plus"}} Add {{$page.Meta.Label}}</a>{{end}}
+    </div>
+    {{end}}
+
+    {{if $page.Rows}}
+    <div class="flex flex-wrap items-center justify-between gap-3 border-t border-zinc-200 px-4 py-3 text-sm dark:border-zinc-800">
+      <p class="text-zinc-500">Showing <span class="font-medium text-zinc-900 tabular-nums dark:text-white">{{$page.From}}–{{$page.To}}</span> of <span class="font-medium text-zinc-900 tabular-nums dark:text-white">{{$page.Total}}</span></p>
+      {{if gt $page.Pages 1}}
+      <nav class="flex items-center gap-1" hx-target="#results" hx-select="#results" hx-swap="outerHTML" hx-push-url="true">
+        {{if $page.PrevURL}}<a href="{{$page.PrevURL}}" hx-get="{{$page.PrevURL}}" class="button button-ghost p-1.5">{{icon "chevron-left"}}</a>{{end}}
+        {{range $page.PageLinks}}
+          {{if .Ellipsis}}<span class="px-2 text-zinc-400">…</span>
+          {{else}}<a href="{{.URL}}" hx-get="{{.URL}}" class="grid h-8 min-w-8 place-items-center rounded-lg px-2 text-sm tabular-nums {{if .Active}}bg-indigo-600 font-medium text-white{{else}}text-zinc-600 hover:bg-zinc-100 dark:text-zinc-300 dark:hover:bg-zinc-800{{end}}">{{.Number}}</a>{{end}}
+        {{end}}
+        {{if $page.NextURL}}<a href="{{$page.NextURL}}" hx-get="{{$page.NextURL}}" class="button button-ghost p-1.5">{{icon "chevron-right"}}</a>{{end}}
+      </nav>
+      {{end}}
+    </div>
+    {{end}}
+  </div>
+  {{range $page.Hidden}}<input type="hidden" name="{{.Name}}" value="{{.Value}}" data-list-state>{{end}}
+</div>
+{{end}}
+
+{{define "autocomplete"}}
+{{range .Page}}
+<button type="button" data-id="{{.ID}}" data-label="{{.Label}}" @click="choose($el)"
+        class="flex w-full items-center justify-between gap-3 rounded-lg px-3 py-2 text-left text-sm text-zinc-700 hover:bg-indigo-50 hover:text-indigo-700 dark:text-zinc-300 dark:hover:bg-indigo-500/10 dark:hover:text-indigo-300">
+  <span class="truncate">{{.Label}}</span><span class="text-xs text-zinc-400 tabular-nums">#{{.ID}}</span>
+</button>
+{{else}}
+<p class="px-3 py-6 text-center text-sm text-zinc-500">No matches</p>
+{{end}}
+{{end}}

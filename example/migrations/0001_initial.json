@@ -1,0 +1,432 @@
+{
+  "name": "0001_initial",
+  "operations": [
+    {
+      "type": "create_table",
+      "table_state": {
+        "name": "blog_author",
+        "model": "blog.Author",
+        "columns": [
+          {
+            "name": "id",
+            "type": "bigint",
+            "primary_key": true
+          },
+          {
+            "name": "name",
+            "type": "varchar(120)"
+          },
+          {
+            "name": "email",
+            "type": "varchar(254)"
+          },
+          {
+            "name": "bio",
+            "type": "text"
+          },
+          {
+            "name": "user_id",
+            "type": "bigint",
+            "nullable": true
+          },
+          {
+            "name": "created_at",
+            "type": "timestamptz",
+            "default": "now()"
+          },
+          {
+            "name": "updated_at",
+            "type": "timestamptz",
+            "default": "now()"
+          }
+        ]
+      }
+    },
+    {
+      "type": "create_table",
+      "table_state": {
+        "name": "blog_comment",
+        "model": "blog.Comment",
+        "columns": [
+          {
+            "name": "id",
+            "type": "bigint",
+            "primary_key": true
+          },
+          {
+            "name": "post_id",
+            "type": "bigint"
+          },
+          {
+            "name": "name",
+            "type": "varchar(100)"
+          },
+          {
+            "name": "body",
+            "type": "text"
+          },
+          {
+            "name": "approved",
+            "type": "boolean",
+            "default": "false"
+          },
+          {
+            "name": "created_at",
+            "type": "timestamptz",
+            "default": "now()"
+          },
+          {
+            "name": "updated_at",
+            "type": "timestamptz",
+            "default": "now()"
+          }
+        ]
+      }
+    },
+    {
+      "type": "create_table",
+      "table_state": {
+        "name": "blog_post",
+        "model": "blog.Post",
+        "columns": [
+          {
+            "name": "id",
+            "type": "bigint",
+            "primary_key": true
+          },
+          {
+            "name": "title",
+            "type": "varchar(200)"
+          },
+          {
+            "name": "slug",
+            "type": "varchar(200)"
+          },
+          {
+            "name": "author_id",
+            "type": "bigint"
+          },
+          {
+            "name": "summary",
+            "type": "text",
+            "nullable": true
+          },
+          {
+            "name": "body",
+            "type": "text"
+          },
+          {
+            "name": "status",
+            "type": "varchar(20)",
+            "default": "'draft'"
+          },
+          {
+            "name": "featured",
+            "type": "boolean",
+            "default": "false"
+          },
+          {
+            "name": "views",
+            "type": "bigint",
+            "default": "0"
+          },
+          {
+            "name": "published_at",
+            "type": "timestamptz",
+            "nullable": true
+          },
+          {
+            "name": "created_at",
+            "type": "timestamptz",
+            "default": "now()"
+          },
+          {
+            "name": "updated_at",
+            "type": "timestamptz",
+            "default": "now()"
+          }
+        ]
+      }
+    },
+    {
+      "type": "create_table",
+      "table_state": {
+        "name": "blog_post_tag",
+        "model": "blog.PostTag",
+        "columns": [
+          {
+            "name": "id",
+            "type": "bigint",
+            "primary_key": true
+          },
+          {
+            "name": "post_id",
+            "type": "bigint"
+          },
+          {
+            "name": "tag_id",
+            "type": "bigint"
+          },
+          {
+            "name": "created_at",
+            "type": "timestamptz",
+            "default": "now()"
+          },
+          {
+            "name": "updated_at",
+            "type": "timestamptz",
+            "default": "now()"
+          }
+        ]
+      }
+    },
+    {
+      "type": "create_table",
+      "table_state": {
+        "name": "blog_tag",
+        "model": "blog.Tag",
+        "columns": [
+          {
+            "name": "id",
+            "type": "bigint",
+            "primary_key": true
+          },
+          {
+            "name": "name",
+            "type": "varchar(50)"
+          },
+          {
+            "name": "slug",
+            "type": "varchar(50)"
+          },
+          {
+            "name": "created_at",
+            "type": "timestamptz",
+            "default": "now()"
+          },
+          {
+            "name": "updated_at",
+            "type": "timestamptz",
+            "default": "now()"
+          }
+        ]
+      }
+    },
+    {
+      "type": "add_index",
+      "table": "blog_author",
+      "index": {
+        "name": "blog_author_user_id_key",
+        "columns": [
+          "user_id"
+        ],
+        "unique": true
+      }
+    },
+    {
+      "type": "add_index",
+      "table": "blog_comment",
+      "index": {
+        "name": "blog_comment_post_id_idx",
+        "columns": [
+          "post_id"
+        ]
+      }
+    },
+    {
+      "type": "add_index",
+      "table": "blog_post",
+      "index": {
+        "name": "blog_post_slug_key",
+        "columns": [
+          "slug"
+        ],
+        "unique": true
+      }
+    },
+    {
+      "type": "add_index",
+      "table": "blog_post",
+      "index": {
+        "name": "blog_post_author_id_idx",
+        "columns": [
+          "author_id"
+        ]
+      }
+    },
+    {
+      "type": "add_index",
+      "table": "blog_post",
+      "index": {
+        "name": "blog_post_status_idx",
+        "columns": [
+          "status"
+        ]
+      }
+    },
+    {
+      "type": "add_index",
+      "table": "blog_post_tag",
+      "index": {
+        "name": "blog_post_tag_post_id_idx",
+        "columns": [
+          "post_id"
+        ]
+      }
+    },
+    {
+      "type": "add_index",
+      "table": "blog_post_tag",
+      "index": {
+        "name": "blog_post_tag_tag_id_idx",
+        "columns": [
+          "tag_id"
+        ]
+      }
+    },
+    {
+      "type": "add_index",
+      "table": "blog_post_tag",
+      "index": {
+        "name": "blog_post_tag_post_id_tag_id_uniq",
+        "columns": [
+          "post_id",
+          "tag_id"
+        ],
+        "unique": true
+      }
+    },
+    {
+      "type": "add_index",
+      "table": "blog_tag",
+      "index": {
+        "name": "blog_tag_name_key",
+        "columns": [
+          "name"
+        ],
+        "unique": true
+      }
+    },
+    {
+      "type": "add_index",
+      "table": "blog_tag",
+      "index": {
+        "name": "blog_tag_slug_key",
+        "columns": [
+          "slug"
+        ],
+        "unique": true
+      }
+    },
+    {
+      "type": "add_foreign_key",
+      "table": "blog_author",
+      "column": {
+        "name": "user_id",
+        "type": "bigint",
+        "nullable": true,
+        "foreign_key": {
+          "table": "auth_user",
+          "column": "id",
+          "on_delete": "CASCADE"
+        }
+      }
+    },
+    {
+      "type": "add_foreign_key",
+      "table": "blog_comment",
+      "column": {
+        "name": "post_id",
+        "type": "bigint",
+        "foreign_key": {
+          "table": "blog_post",
+          "column": "id",
+          "on_delete": "CASCADE"
+        }
+      }
+    },
+    {
+      "type": "add_foreign_key",
+      "table": "blog_post",
+      "column": {
+        "name": "author_id",
+        "type": "bigint",
+        "foreign_key": {
+          "table": "blog_author",
+          "column": "id",
+          "on_delete": "RESTRICT"
+        }
+      }
+    },
+    {
+      "type": "add_foreign_key",
+      "table": "blog_post_tag",
+      "column": {
+        "name": "post_id",
+        "type": "bigint",
+        "foreign_key": {
+          "table": "blog_post",
+          "column": "id",
+          "on_delete": "CASCADE"
+        }
+      }
+    },
+    {
+      "type": "add_foreign_key",
+      "table": "blog_post_tag",
+      "column": {
+        "name": "tag_id",
+        "type": "bigint",
+        "foreign_key": {
+          "table": "blog_tag",
+          "column": "id",
+          "on_delete": "CASCADE"
+        }
+      }
+    }
+  ],
+  "up": [
+    "CREATE TABLE \"blog_author\" (\n    \"id\" bigint GENERATED BY DEFAULT AS IDENTITY PRIMARY KEY,\n    \"name\" varchar(120) NOT NULL,\n    \"email\" varchar(254) NOT NULL,\n    \"bio\" text NOT NULL,\n    \"user_id\" bigint,\n    \"created_at\" timestamptz NOT NULL DEFAULT now(),\n    \"updated_at\" timestamptz NOT NULL DEFAULT now()\n)",
+    "CREATE TABLE \"blog_comment\" (\n    \"id\" bigint GENERATED BY DEFAULT AS IDENTITY PRIMARY KEY,\n    \"post_id\" bigint NOT NULL,\n    \"name\" varchar(100) NOT NULL,\n    \"body\" text NOT NULL,\n    \"approved\" boolean NOT NULL DEFAULT false,\n    \"created_at\" timestamptz NOT NULL DEFAULT now(),\n    \"updated_at\" timestamptz NOT NULL DEFAULT now()\n)",
+    "CREATE TABLE \"blog_post\" (\n    \"id\" bigint GENERATED BY DEFAULT AS IDENTITY PRIMARY KEY,\n    \"title\" varchar(200) NOT NULL,\n    \"slug\" varchar(200) NOT NULL,\n    \"author_id\" bigint NOT NULL,\n    \"summary\" text,\n    \"body\" text NOT NULL,\n    \"status\" varchar(20) NOT NULL DEFAULT 'draft',\n    \"featured\" boolean NOT NULL DEFAULT false,\n    \"views\" bigint NOT NULL DEFAULT 0,\n    \"published_at\" timestamptz,\n    \"created_at\" timestamptz NOT NULL DEFAULT now(),\n    \"updated_at\" timestamptz NOT NULL DEFAULT now()\n)",
+    "CREATE TABLE \"blog_post_tag\" (\n    \"id\" bigint GENERATED BY DEFAULT AS IDENTITY PRIMARY KEY,\n    \"post_id\" bigint NOT NULL,\n    \"tag_id\" bigint NOT NULL,\n    \"created_at\" timestamptz NOT NULL DEFAULT now(),\n    \"updated_at\" timestamptz NOT NULL DEFAULT now()\n)",
+    "CREATE TABLE \"blog_tag\" (\n    \"id\" bigint GENERATED BY DEFAULT AS IDENTITY PRIMARY KEY,\n    \"name\" varchar(50) NOT NULL,\n    \"slug\" varchar(50) NOT NULL,\n    \"created_at\" timestamptz NOT NULL DEFAULT now(),\n    \"updated_at\" timestamptz NOT NULL DEFAULT now()\n)",
+    "CREATE UNIQUE INDEX \"blog_author_user_id_key\" ON \"blog_author\" (\"user_id\")",
+    "CREATE INDEX \"blog_comment_post_id_idx\" ON \"blog_comment\" (\"post_id\")",
+    "CREATE UNIQUE INDEX \"blog_post_slug_key\" ON \"blog_post\" (\"slug\")",
+    "CREATE INDEX \"blog_post_author_id_idx\" ON \"blog_post\" (\"author_id\")",
+    "CREATE INDEX \"blog_post_status_idx\" ON \"blog_post\" (\"status\")",
+    "CREATE INDEX \"blog_post_tag_post_id_idx\" ON \"blog_post_tag\" (\"post_id\")",
+    "CREATE INDEX \"blog_post_tag_tag_id_idx\" ON \"blog_post_tag\" (\"tag_id\")",
+    "CREATE UNIQUE INDEX \"blog_post_tag_post_id_tag_id_uniq\" ON \"blog_post_tag\" (\"post_id\", \"tag_id\")",
+    "CREATE UNIQUE INDEX \"blog_tag_name_key\" ON \"blog_tag\" (\"name\")",
+    "CREATE UNIQUE INDEX \"blog_tag_slug_key\" ON \"blog_tag\" (\"slug\")",
+    "ALTER TABLE \"blog_author\" ADD CONSTRAINT \"blog_author_user_id_fkey\" FOREIGN KEY (\"user_id\") REFERENCES \"auth_user\" (\"id\") ON DELETE CASCADE",
+    "ALTER TABLE \"blog_comment\" ADD CONSTRAINT \"blog_comment_post_id_fkey\" FOREIGN KEY (\"post_id\") REFERENCES \"blog_post\" (\"id\") ON DELETE CASCADE",
+    "ALTER TABLE \"blog_post\" ADD CONSTRAINT \"blog_post_author_id_fkey\" FOREIGN KEY (\"author_id\") REFERENCES \"blog_author\" (\"id\") ON DELETE RESTRICT",
+    "ALTER TABLE \"blog_post_tag\" ADD CONSTRAINT \"blog_post_tag_post_id_fkey\" FOREIGN KEY (\"post_id\") REFERENCES \"blog_post\" (\"id\") ON DELETE CASCADE",
+    "ALTER TABLE \"blog_post_tag\" ADD CONSTRAINT \"blog_post_tag_tag_id_fkey\" FOREIGN KEY (\"tag_id\") REFERENCES \"blog_tag\" (\"id\") ON DELETE CASCADE"
+  ],
+  "down": [
+    "ALTER TABLE \"blog_post_tag\" DROP CONSTRAINT \"blog_post_tag_tag_id_fkey\"",
+    "ALTER TABLE \"blog_post_tag\" DROP CONSTRAINT \"blog_post_tag_post_id_fkey\"",
+    "ALTER TABLE \"blog_post\" DROP CONSTRAINT \"blog_post_author_id_fkey\"",
+    "ALTER TABLE \"blog_comment\" DROP CONSTRAINT \"blog_comment_post_id_fkey\"",
+    "ALTER TABLE \"blog_author\" DROP CONSTRAINT \"blog_author_user_id_fkey\"",
+    "DROP INDEX \"blog_tag_slug_key\"",
+    "DROP INDEX \"blog_tag_name_key\"",
+    "DROP INDEX \"blog_post_tag_post_id_tag_id_uniq\"",
+    "DROP INDEX \"blog_post_tag_tag_id_idx\"",
+    "DROP INDEX \"blog_post_tag_post_id_idx\"",
+    "DROP INDEX \"blog_post_status_idx\"",
+    "DROP INDEX \"blog_post_author_id_idx\"",
+    "DROP INDEX \"blog_post_slug_key\"",
+    "DROP INDEX \"blog_comment_post_id_idx\"",
+    "DROP INDEX \"blog_author_user_id_key\"",
+    "DROP TABLE \"blog_tag\"",
+    "DROP TABLE \"blog_post_tag\"",
+    "DROP TABLE \"blog_post\"",
+    "DROP TABLE \"blog_comment\"",
+    "DROP TABLE \"blog_author\""
+  ]
+}
