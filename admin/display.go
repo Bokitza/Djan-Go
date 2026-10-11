@@ -11,8 +11,8 @@ import (
 	"unicode/utf8"
 
 	"github.com/shopspring/decimal"
-	"github.com/yoav/djan-go/models"
-	"github.com/yoav/djan-go/query"
+	"github.com/yoav-rogat/djan-go/models"
+	"github.com/yoav-rogat/djan-go/query"
 )
 
 // cell is a rendered value in lists and read-only form fields.

@@ -9,8 +9,8 @@ import (
 	"strings"
 
 	"github.com/jackc/pgx/v5"
-	"github.com/yoav/djan-go/db"
-	"github.com/yoav/djan-go/models"
+	"github.com/yoav-rogat/djan-go/db"
+	"github.com/yoav-rogat/djan-go/models"
 )
 
 var (

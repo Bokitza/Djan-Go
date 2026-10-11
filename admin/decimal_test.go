@@ -5,7 +5,7 @@ import (
 	"time"
 
 	"github.com/shopspring/decimal"
-	"github.com/yoav/djan-go/models"
+	"github.com/yoav-rogat/djan-go/models"
 )
 
 func TestDecimalAndDateInput(t *testing.T) {

@@ -7,8 +7,8 @@ import (
 	"log"
 	"os"
 
-	"github.com/yoav/djan-go/auth"
-	"github.com/yoav/djan-go/migrations"
+	"github.com/yoav-rogat/djan-go/auth"
+	"github.com/yoav-rogat/djan-go/migrations"
 )
 
 func main() {

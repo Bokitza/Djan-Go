@@ -5,9 +5,9 @@ import (
 	"errors"
 	"testing"
 
-	"github.com/yoav/djan-go/db"
-	"github.com/yoav/djan-go/internal/testdb"
-	"github.com/yoav/djan-go/models"
+	"github.com/yoav-rogat/djan-go/db"
+	"github.com/yoav-rogat/djan-go/testdb"
+	"github.com/yoav-rogat/djan-go/models"
 )
 
 func TestQuerySetsAgainstPostgres(t *testing.T) {

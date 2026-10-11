@@ -9,10 +9,10 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/yoav/djan-go/admin"
-	"github.com/yoav/djan-go/auth"
-	"github.com/yoav/djan-go/models"
-	"github.com/yoav/djan-go/query"
+	"github.com/yoav-rogat/djan-go/admin"
+	"github.com/yoav-rogat/djan-go/auth"
+	"github.com/yoav-rogat/djan-go/models"
+	"github.com/yoav-rogat/djan-go/query"
 )
 
 type Label struct {

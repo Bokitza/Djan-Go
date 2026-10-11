@@ -23,11 +23,11 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 	"golang.org/x/term"
 
-	"github.com/yoav/djan-go/admin"
-	"github.com/yoav/djan-go/auth"
-	"github.com/yoav/djan-go/db"
-	"github.com/yoav/djan-go/migrations"
-	"github.com/yoav/djan-go/models"
+	"github.com/yoav-rogat/djan-go/admin"
+	"github.com/yoav-rogat/djan-go/auth"
+	"github.com/yoav-rogat/djan-go/db"
+	"github.com/yoav-rogat/djan-go/migrations"
+	"github.com/yoav-rogat/djan-go/models"
 )
 
 // App describes a project.

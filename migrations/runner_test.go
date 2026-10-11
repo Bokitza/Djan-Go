@@ -7,11 +7,11 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/yoav/djan-go/auth"
-	"github.com/yoav/djan-go/internal/testdb"
-	"github.com/yoav/djan-go/migrations"
-	"github.com/yoav/djan-go/models"
-	"github.com/yoav/djan-go/query"
+	"github.com/yoav-rogat/djan-go/auth"
+	"github.com/yoav-rogat/djan-go/testdb"
+	"github.com/yoav-rogat/djan-go/migrations"
+	"github.com/yoav-rogat/djan-go/models"
+	"github.com/yoav-rogat/djan-go/query"
 )
 
 type note struct {

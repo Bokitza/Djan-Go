@@ -7,9 +7,9 @@ import (
 	"strings"
 
 	"github.com/jackc/pgx/v5"
-	"github.com/yoav/djan-go/db"
-	"github.com/yoav/djan-go/models"
-	"github.com/yoav/djan-go/query"
+	"github.com/yoav-rogat/djan-go/db"
+	"github.com/yoav-rogat/djan-go/models"
+	"github.com/yoav-rogat/djan-go/query"
 )
 
 // Actions that get an automatic permission for every model.

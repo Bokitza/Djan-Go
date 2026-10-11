@@ -26,11 +26,12 @@ import (
 	"errors"
 	"fmt"
 	"reflect"
+	"slices"
 	"strings"
 	"unsafe"
 
-	"github.com/yoav/djan-go/models"
-	"github.com/yoav/djan-go/query"
+	"github.com/yoav-rogat/djan-go/models"
+	"github.com/yoav-rogat/djan-go/query"
 )
 
 // Resource maps model T to dataset columns and back.
@@ -289,6 +290,26 @@ func (r Resource[T]) Headers() ([]string, error) {
 	headers := make([]string, len(resolved.columns))
 	for index, column := range resolved.columns {
 		headers[index] = column.header
+	}
+	return headers, nil
+}
+
+// ImportHeaders returns the columns that are read on import; the others are export-only.
+func (r Resource[T]) ImportHeaders() ([]string, error) {
+	resolved, err := r.resolve()
+	if err != nil {
+		return nil, err
+	}
+	var headers []string
+	for _, column := range resolved.columns {
+		if column.importable() {
+			headers = append(headers, column.header)
+		}
+	}
+	for _, column := range resolved.importIDFields {
+		if !slices.Contains(headers, column.header) {
+			headers = append(headers, column.header)
+		}
 	}
 	return headers, nil
 }

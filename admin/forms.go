@@ -13,8 +13,8 @@ import (
 	"unicode/utf8"
 
 	"github.com/shopspring/decimal"
-	"github.com/yoav/djan-go/models"
-	"github.com/yoav/djan-go/query"
+	"github.com/yoav-rogat/djan-go/models"
+	"github.com/yoav-rogat/djan-go/query"
 )
 
 type choiceOption struct {

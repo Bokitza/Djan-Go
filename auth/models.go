@@ -6,8 +6,8 @@ import (
 	"io/fs"
 	"time"
 
-	"github.com/yoav/djan-go/migrations"
-	"github.com/yoav/djan-go/models"
+	"github.com/yoav-rogat/djan-go/migrations"
+	"github.com/yoav-rogat/djan-go/models"
 )
 
 // User is an account. Staff users may log into the admin; superusers have every permission.

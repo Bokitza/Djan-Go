@@ -4,10 +4,10 @@ import (
 	"context"
 	"errors"
 
-	"github.com/yoav/djan-go/admin"
-	"github.com/yoav/djan-go/auth"
-	"github.com/yoav/djan-go/importexport"
-	"github.com/yoav/djan-go/query"
+	"github.com/yoav-rogat/djan-go/admin"
+	"github.com/yoav-rogat/djan-go/auth"
+	"github.com/yoav-rogat/djan-go/importexport"
+	"github.com/yoav-rogat/djan-go/query"
 )
 
 // AuthorFor returns the author profile linked to user, or nil.

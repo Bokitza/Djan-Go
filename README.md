@@ -25,7 +25,9 @@ that field references are checked by the compiler instead of being passed around
 - **Auth** (`auth`): users, password hashing, sessions and permissions, with built-in migrations.
 - **Import/export** (`importexport`): django-import-export style resources that move model data
   to and from CSV, TSV and JSON, with custom headers, foreign key lookups by name, computed
-  columns, skip-unchanged, dry runs and per-row error reports, all inside a transaction.
+  columns, skip-unchanged, dry runs and per-row error reports, all inside a transaction. Each
+  `ModelAdmin` opts in with an `ImportExport` policy that adds import (upload, preview, confirm),
+  export of the filtered list and export of selected rows, following the admin's permission rules.
 - **Management commands** (`management`): `check`, `makemigrations`, `migrate`,
   `showmigrations`, `createsuperuser`, `runserver`, plus your own custom commands.
 
@@ -68,6 +70,36 @@ func main() {
 	})
 }
 ```
+
+Import and export are configured per model in its admin, much like django-import-export's
+`ImportExportModelAdmin` with a `resource_class`:
+
+```go
+admin.Register(site, admin.ModelAdmin[Post]{
+	ImportExport: &admin.ImportExport[Post]{
+		Import: true, Export: true, ExportSelected: true,
+		Resources: []importexport.Resource[Post]{{
+			Configure: func(p *Post, config *importexport.Config) {
+				config.Fields(
+					importexport.F(&p.Slug),
+					importexport.F(&p.Title),
+					importexport.F(&p.Author).Widget(importexport.ForeignKey(func(a *Author) *string { return &a.Name })),
+					importexport.Through(&p.Author, func(a *Author) importexport.Field { return importexport.F(&a.Email) }),
+				)
+				config.ImportIDFields(importexport.F(&p.Slug))
+				config.SkipUnchanged()
+			},
+			BeforeImportRow: func(ctx context.Context, row importexport.Row) error {
+				user := admin.RequestFrom(ctx).User // the request, like kwargs["request"]
+				...
+			},
+		}},
+	},
+})
+```
+
+Use `ResourcesFor(r)` instead of `Resources` to choose resources per user (returning none hides
+import and export), like overriding `get_resource_classes`.
 
 ## Running the example
 

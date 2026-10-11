@@ -5,7 +5,7 @@ import (
 	"net/http/httptest"
 	"testing"
 
-	"github.com/yoav/djan-go/management"
+	"github.com/yoav-rogat/djan-go/management"
 )
 
 func TestMiddlewareWrapsProjectRoutes(t *testing.T) {

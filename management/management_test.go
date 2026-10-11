@@ -5,10 +5,10 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/yoav/djan-go/auth"
-	"github.com/yoav/djan-go/internal/testdb"
-	"github.com/yoav/djan-go/management"
-	"github.com/yoav/djan-go/models"
+	"github.com/yoav-rogat/djan-go/auth"
+	"github.com/yoav-rogat/djan-go/testdb"
+	"github.com/yoav-rogat/djan-go/management"
+	"github.com/yoav-rogat/djan-go/models"
 )
 
 type Note struct {

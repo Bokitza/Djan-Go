@@ -11,8 +11,8 @@ import (
 	"strings"
 	"time"
 
-	"github.com/yoav/djan-go/models"
-	"github.com/yoav/djan-go/query"
+	"github.com/yoav-rogat/djan-go/models"
+	"github.com/yoav-rogat/djan-go/query"
 )
 
 // SessionSettings configures the session cookie.

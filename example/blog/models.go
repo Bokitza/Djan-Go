@@ -7,8 +7,8 @@ import (
 	"strings"
 	"time"
 
-	"github.com/yoav/djan-go/auth"
-	"github.com/yoav/djan-go/models"
+	"github.com/yoav-rogat/djan-go/auth"
+	"github.com/yoav-rogat/djan-go/models"
 )
 
 // Post statuses.

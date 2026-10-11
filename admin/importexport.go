@@ -14,9 +14,9 @@ import (
 	"strings"
 	"time"
 
-	"github.com/yoav/djan-go/importexport"
-	"github.com/yoav/djan-go/models"
-	"github.com/yoav/djan-go/query"
+	"github.com/yoav-rogat/djan-go/importexport"
+	"github.com/yoav-rogat/djan-go/models"
+	"github.com/yoav-rogat/djan-go/query"
 )
 
 // ImportExport is the import and export policy of a model, like django-import-export's
@@ -63,8 +63,13 @@ type transferPolicy struct {
 type transferResource struct {
 	Index   int
 	Name    string
-	Headers []string
+	Columns []transferColumn
 	Error   string
+}
+
+type transferColumn struct {
+	Header     string
+	ExportOnly bool
 }
 
 func (p transferPolicy) format(name string) importexport.Format {
@@ -120,14 +125,17 @@ func (e *entry[T]) transfer(r *Request) transferPolicy {
 	for index, resource := range resources {
 		name := resource.Name
 		if name == "" {
-			name = "Default"
+			name = r.Site.translate("Default")
 		}
 		described := transferResource{Index: index, Name: name}
 		headers, err := resource.Headers()
+		imported, _ := resource.ImportHeaders()
 		if err != nil {
 			described.Error = err.Error()
 		}
-		described.Headers = headers
+		for _, header := range headers {
+			described.Columns = append(described.Columns, transferColumn{Header: header, ExportOnly: !slices.Contains(imported, header)})
+		}
 		transfer.Resources = append(transfer.Resources, described)
 	}
 	return transfer
@@ -207,7 +215,7 @@ func (e *entry[T]) checkImportAllowed(r *Request, permissions Permissions, objec
 	var original any
 	if isNew {
 		if !permissions.Add {
-			return fmt.Errorf("You don't have permission to add %s.", strings.ToLower(info.VerboseNamePlural))
+			return invalid("You don't have permission to add %s.", strings.ToLower(r.Site.modelNamePlural(info)))
 		}
 	} else {
 		id := info.PKOf(object)
@@ -219,7 +227,7 @@ func (e *entry[T]) checkImportAllowed(r *Request, permissions Permissions, objec
 			}
 		}
 		if !allowed[id] {
-			return fmt.Errorf("You don't have permission to change this %s.", strings.ToLower(info.VerboseName))
+			return invalid("You don't have permission to change this %s.", strings.ToLower(r.Site.modelName(info)))
 		}
 		var err error
 		if original, err = query.ForModel(info).GetByPK(r.Context(), id); err != nil {
@@ -235,7 +243,8 @@ func (e *entry[T]) checkImportAllowed(r *Request, permissions Permissions, objec
 			continue
 		}
 		if !r.Site.relatedVisible(r, field, id) {
-			return fmt.Errorf("%s: select a valid choice; %s #%d is not one of the available choices.", field.VerboseName, strings.ToLower(field.Related().VerboseName), id)
+			return invalid("%s: select a valid choice; %s #%d is not one of the available choices.",
+				r.Site.translate(field.VerboseName), strings.ToLower(r.Site.modelName(field.Related())), id)
 		}
 	}
 	return nil
@@ -271,11 +280,11 @@ func (s *Site) exportView(w http.ResponseWriter, r *Request, entry modelEntry) {
 	transfer := entry.transfer(r)
 	selected := r.Method == http.MethodPost
 	if (selected && !transfer.ExportSelected) || (!selected && !transfer.Export) {
-		s.renderError(w, r, http.StatusForbidden, "You can't export "+strings.ToLower(info.VerboseNamePlural)+".")
+		s.renderError(w, r, http.StatusForbidden, s.translatef("You can't export %s.", strings.ToLower(s.modelNamePlural(info))))
 		return
 	}
 	if err := r.ParseForm(); err != nil {
-		s.renderError(w, r, http.StatusBadRequest, "Invalid form.")
+		s.renderError(w, r, http.StatusBadRequest, s.translate("Invalid form."))
 		return
 	}
 	format := transfer.format(r.Form.Get("format"))
@@ -292,7 +301,7 @@ func (s *Site) exportView(w http.ResponseWriter, r *Request, entry modelEntry) {
 			}
 		}
 		if len(ids) == 0 {
-			s.addFlash(w, r.Request, "info", "No items were selected.")
+			s.addFlash(w, r.Request, "info", s.translate("No items were selected."))
 			redirect(w, r.Request, s.modelURL(info)+"?"+r.URL.RawQuery)
 			return
 		}
@@ -358,14 +367,14 @@ func (s *Site) importView(w http.ResponseWriter, r *Request, entry modelEntry) {
 	info := entry.info()
 	transfer := entry.transfer(r)
 	if !transfer.Import {
-		s.renderError(w, r, http.StatusForbidden, "You can't import "+strings.ToLower(info.VerboseNamePlural)+".")
+		s.renderError(w, r, http.StatusForbidden, s.translatef("You can't import %s.", strings.ToLower(s.modelNamePlural(info))))
 		return
 	}
 	page := importPage{Meta: s.meta(r, entry), Transfer: transfer, Action: s.modelURL(info) + "import/", Accept: transfer.extensions()}
 	page.Extensions = strings.ReplaceAll(page.Accept, ",", ", ")
 	render := func(status int) {
-		title := "Import " + strings.ToLower(info.VerboseNamePlural)
-		s.render(w, "import.html", "base", status, s.newPage(w, r, title, info.Label(), s.modelCrumbs(entry, crumb{Label: "Import"}), page))
+		title := s.translatef("Import %s", strings.ToLower(s.modelNamePlural(info)))
+		s.render(w, "import.html", "base", status, s.newPage(w, r, title, info.Label(), s.modelCrumbs(entry, crumb{Label: s.translate("Import")}), page))
 	}
 	if r.Method != http.MethodPost {
 		render(http.StatusOK)
@@ -374,7 +383,7 @@ func (s *Site) importView(w http.ResponseWriter, r *Request, entry modelEntry) {
 
 	r.Body = http.MaxBytesReader(w, r.Body, maxImportSize+1<<20)
 	if err := r.ParseMultipartForm(maxImportSize); err != nil {
-		page.Error = fmt.Sprintf("The upload failed; files can be at most %d MB.", maxImportSize>>20)
+		page.Error = s.translatef("The upload failed; files can be at most %d MB.", maxImportSize>>20)
 		render(http.StatusBadRequest)
 		return
 	}
@@ -385,7 +394,7 @@ func (s *Site) importView(w http.ResponseWriter, r *Request, entry modelEntry) {
 	if confirm {
 		decoded, err := base64.StdEncoding.DecodeString(r.PostForm.Get("data"))
 		if err != nil {
-			page.Error = "The confirmed file was damaged; upload it again."
+			page.Error = s.translate("The confirmed file was damaged; upload it again.")
 			render(http.StatusBadRequest)
 			return
 		}
@@ -393,13 +402,13 @@ func (s *Site) importView(w http.ResponseWriter, r *Request, entry modelEntry) {
 	} else {
 		file, header, err := r.FormFile("file")
 		if err != nil {
-			page.Error = "Choose a file to import."
+			page.Error = s.translate("Choose a file to import.")
 			render(http.StatusUnprocessableEntity)
 			return
 		}
 		defer file.Close()
 		if content, err = io.ReadAll(file); err != nil {
-			page.Error = "The file could not be read."
+			page.Error = s.translate("The file could not be read.")
 			render(http.StatusBadRequest)
 			return
 		}
@@ -407,16 +416,16 @@ func (s *Site) importView(w http.ResponseWriter, r *Request, entry modelEntry) {
 	}
 	format := transfer.formatForFile(filename)
 	if format == nil {
-		page.Error = "Unsupported file type. Upload a " + page.Extensions + " file."
+		page.Error = s.translatef("Unsupported file type. Upload a %s file.", page.Extensions)
 		render(http.StatusUnprocessableEntity)
 		return
 	}
 	dataset, err := format.Read(bytes.NewReader(content))
 	if err == nil && len(dataset.Rows) == 0 {
-		err = errors.New("the file has no rows")
+		err = errors.New(s.translate("the file has no rows"))
 	}
 	if err != nil {
-		page.Error = "The file could not be read: " + strings.TrimPrefix(err.Error(), "importexport: ")
+		page.Error = s.translatef("The file could not be read: %s", strings.TrimPrefix(err.Error(), "importexport: "))
 		render(http.StatusUnprocessableEntity)
 		return
 	}
@@ -428,7 +437,7 @@ func (s *Site) importView(w http.ResponseWriter, r *Request, entry modelEntry) {
 	}
 	if result.Committed {
 		totals := result.Totals
-		s.addFlash(w, r.Request, "success", fmt.Sprintf("Import finished: %d new, %d updated, %d skipped.",
+		s.addFlash(w, r.Request, "success", s.translatef("Import finished: %d new, %d updated, %d skipped.",
 			totals[importexport.RowNew], totals[importexport.RowUpdate], totals[importexport.RowSkip]))
 		redirect(w, r.Request, s.modelURL(info))
 		return
@@ -477,7 +486,7 @@ func (s *Site) buildPreview(info *models.ModelInfo, dataset *importexport.Datase
 		}
 		slices.Sort(row.Errors)
 		if rowResult.Error != nil {
-			row.Errors = append(row.Errors, rowResult.Error.Error())
+			row.Errors = append(row.Errors, s.errorText(rowResult.Error))
 		}
 		preview.Rows = append(preview.Rows, row)
 	}

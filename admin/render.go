@@ -11,7 +11,7 @@ import (
 	"net/url"
 	"strings"
 
-	"github.com/yoav/djan-go/auth"
+	"github.com/yoav-rogat/djan-go/auth"
 )
 
 var pages = []string{"login.html", "dashboard.html", "list.html", "form.html", "error.html", "import.html"}

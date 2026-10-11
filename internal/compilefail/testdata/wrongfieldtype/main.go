@@ -1,6 +1,6 @@
 package main
 
-import "github.com/yoav/djan-go/models"
+import "github.com/yoav-rogat/djan-go/models"
 
 type Post struct {
 	models.Model

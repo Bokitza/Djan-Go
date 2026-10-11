@@ -17,7 +17,7 @@ import (
 
 	"github.com/shopspring/decimal"
 
-	"github.com/yoav/djan-go/models"
+	"github.com/yoav-rogat/djan-go/models"
 )
 
 // State is the database schema described by a sequence of migrations.

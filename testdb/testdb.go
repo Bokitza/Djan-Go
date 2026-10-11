@@ -21,9 +21,9 @@ import (
 	"github.com/testcontainers/testcontainers-go"
 	postgrescontainer "github.com/testcontainers/testcontainers-go/modules/postgres"
 	"github.com/testcontainers/testcontainers-go/wait"
-	"github.com/yoav/djan-go/db"
-	"github.com/yoav/djan-go/migrations"
-	"github.com/yoav/djan-go/models"
+	"github.com/yoav-rogat/djan-go/db"
+	"github.com/yoav-rogat/djan-go/migrations"
+	"github.com/yoav-rogat/djan-go/models"
 )
 
 var (

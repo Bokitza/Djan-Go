@@ -5,7 +5,7 @@ import (
 	"maps"
 	"strings"
 
-	"github.com/yoav/djan-go/models"
+	"github.com/yoav-rogat/djan-go/models"
 )
 
 // translations maps a language to English UI text and its translation. Texts without a

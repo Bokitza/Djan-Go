@@ -12,13 +12,13 @@ import (
 	"testing"
 
 	"github.com/jackc/pgx/v5/pgxpool"
-	"github.com/yoav/djan-go/admin"
-	"github.com/yoav/djan-go/auth"
-	"github.com/yoav/djan-go/db"
-	"github.com/yoav/djan-go/importexport"
-	"github.com/yoav/djan-go/internal/testdb"
-	"github.com/yoav/djan-go/models"
-	"github.com/yoav/djan-go/query"
+	"github.com/yoav-rogat/djan-go/admin"
+	"github.com/yoav-rogat/djan-go/auth"
+	"github.com/yoav-rogat/djan-go/db"
+	"github.com/yoav-rogat/djan-go/importexport"
+	"github.com/yoav-rogat/djan-go/testdb"
+	"github.com/yoav-rogat/djan-go/models"
+	"github.com/yoav-rogat/djan-go/query"
 )
 
 type Ticket struct {

@@ -6,7 +6,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/yoav/djan-go/models"
+	"github.com/yoav-rogat/djan-go/models"
 )
 
 type writer struct {
