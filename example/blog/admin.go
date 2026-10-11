@@ -76,6 +76,14 @@ func RegisterAdmin(site *admin.Site) {
 			Import: true, Export: true, ExportSelected: true,
 			Resources: []importexport.Resource[Post]{postResource},
 		},
+		Inlines: []admin.Inline[Post]{
+			admin.InlineAdmin[Post, Comment]{
+				Configure: func(c *Comment, config *admin.InlineConfig) {
+					config.Fields(admin.F(&c.Name), admin.F(&c.Body), admin.F(&c.Approved))
+				},
+				ShowChangeLink: true,
+			},
+		},
 		BeforeSave: func(r *admin.Request, post *Post, isNew bool) error {
 			if r.User.IsSuperuser {
 				return nil
@@ -112,6 +120,15 @@ func RegisterAdmin(site *admin.Site) {
 					config.SkipUnchanged()
 				},
 			}},
+		},
+		Inlines: []admin.Inline[Author]{
+			admin.InlineAdmin[Author, Post]{
+				Stacked: true,
+				Configure: func(p *Post, config *admin.InlineConfig) {
+					config.Fields(admin.F(&p.Title), admin.F(&p.Status), admin.F(&p.Featured), admin.F(&p.Views))
+				},
+				ShowChangeLink: true,
+			},
 		},
 	})
 

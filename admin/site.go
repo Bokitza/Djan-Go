@@ -149,6 +149,15 @@ func Register[T any](site *Site, modelAdmin ModelAdmin[T]) {
 			}
 		}
 	}
+	var inlines []extraField
+	for _, inline := range modelAdmin.Inlines {
+		editor, err := inline.editorFor(nil)
+		if err != nil {
+			problems = append(problems, fmt.Errorf("Inlines: %w", err))
+			continue
+		}
+		inlines = append(inlines, editor)
+	}
 	if len(problems) > 0 {
 		messages := make([]string, len(problems))
 		for index, problem := range problems {
@@ -165,6 +174,12 @@ func Register[T any](site *Site, modelAdmin ModelAdmin[T]) {
 			panic(fmt.Sprintf("admin: %s: many-to-many %q clashes with a field of %s", location, field.editor.name(), info.Label()))
 		}
 		modelAdmin.extras = append(modelAdmin.extras, field.editor)
+	}
+	for _, editor := range inlines {
+		if info.FieldByName(editor.name()) != nil || slices.ContainsFunc(modelAdmin.extras, func(extra extraField) bool { return extra.name() == editor.name() }) {
+			panic(fmt.Sprintf("admin: %s: inline %q of %s is listed twice or clashes with a field", location, editor.name(), info.Label()))
+		}
+		modelAdmin.extras = append(modelAdmin.extras, editor)
 	}
 	registered := &entry[T]{model: info, admin: modelAdmin, resolved: resolved}
 	site.entries = append(site.entries, registered)
@@ -222,18 +237,21 @@ type Permissions struct {
 }
 
 func (s *Site) permissionsFor(r *Request, entry modelEntry) Permissions {
+	allowed := entry.permissionRule(r, modelPermissions(r, entry.info()))
+	allowed.Add = allowed.Add && entry.canAddRule(r)
+	return allowed
+}
+
+// modelPermissions is what the user's model permissions grant, before the rules of an admin.
+func modelPermissions(r *Request, info *models.ModelInfo) Permissions {
 	ctx := r.Context()
-	info := entry.info()
 	change := r.User.HasModelPerm(ctx, info, "change")
-	granted := Permissions{
+	return Permissions{
 		View:   change || r.User.HasModelPerm(ctx, info, "view"),
 		Add:    r.User.HasModelPerm(ctx, info, "add"),
 		Change: change,
 		Delete: r.User.HasModelPerm(ctx, info, "delete"),
 	}
-	allowed := entry.permissionRule(r, granted)
-	allowed.Add = allowed.Add && entry.canAddRule(r)
-	return allowed
 }
 
 func (s *Site) modelURL(info *models.ModelInfo) string {

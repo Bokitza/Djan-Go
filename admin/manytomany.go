@@ -102,7 +102,7 @@ func (e *manyToManyEditor[T, J, R]) render(r *Request, object any, isNew, editab
 	return view, nil
 }
 
-func (e *manyToManyEditor[T, J, R]) validate(*Request, bool, url.Values) string { return "" }
+func (e *manyToManyEditor[T, J, R]) validate(*Request, any, bool, url.Values) string { return "" }
 
 func (e *manyToManyEditor[T, J, R]) save(r *Request, object any, form url.Values) error {
 	objects, related, err := e.choices(r)

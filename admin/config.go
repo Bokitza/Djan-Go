@@ -52,6 +52,8 @@ type ModelAdmin[T any] struct {
 	ImportExport *ImportExport[T]
 	// ManyToMany adds checkbox editors for links stored in join models (see admin.ManyToMany).
 	ManyToMany []ManyToManyField[T]
+	// Inlines edit the rows of other models that reference T through a foreign key (see admin.InlineAdmin).
+	Inlines []Inline[T]
 
 	extras []extraField
 }

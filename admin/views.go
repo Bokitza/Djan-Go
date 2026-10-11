@@ -538,7 +538,7 @@ func (s *Site) handleForm(w http.ResponseWriter, r *Request, entry modelEntry, o
 		submitted = r.PostForm
 		fieldErrors = s.bindForm(r, entry, object, locked, submitted)
 		for _, extra := range entry.extraFields() {
-			if message := extra.validate(r, isNew, submitted); message != "" {
+			if message := extra.validate(r, object, isNew, submitted); message != "" {
 				extraErrors[extra.name()] = s.translate(message)
 			}
 		}
@@ -605,6 +605,9 @@ func (s *Site) handleForm(w http.ResponseWriter, r *Request, entry modelEntry, o
 		if err != nil {
 			s.serverError(w, r, err)
 			return
+		}
+		if view.Hidden {
+			continue
 		}
 		view.Label, view.Help = s.translate(view.Label), s.translate(view.Help)
 		view.Error = extraErrors[extra.name()]

@@ -107,96 +107,102 @@ func (s *Site) buildFormFields(r *Request, entry modelEntry, object any, editabl
 			continue
 		}
 		name := field.LookupName()
-		rendered := formField{
-			Name: name, Label: s.translate(field.VerboseName), Help: s.translate(field.HelpText), Error: fieldErrors[name],
-			Nullable: field.Nullable, MaxLength: field.MaxLength,
-			Required: !field.Blank && !field.Nullable && field.Kind != models.KindBool,
+		fieldEditable := editable && s.isEditable(entry, field, locked)
+		if !fieldEditable && field.Kind == models.KindForeignKey {
+			if query.PreloadRelated(r.Context(), []any{object}, field) == nil {
+				_ = loadLabels(r.Context(), field.Related(), loadedTargets(field, []any{object}))
+			}
 		}
-		if !editable || !s.isEditable(entry, field, locked) {
-			rendered.Widget, rendered.ReadOnly = "readonly", true
-			if field.Kind == models.KindForeignKey {
-				if query.PreloadRelated(r.Context(), []any{object}, field) == nil {
-					_ = loadLabels(r.Context(), field.Related(), loadedTargets(field, []any{object}))
-				}
-			}
-			rendered.Display = displayValue(s, r, field, object)
-			fields = append(fields, rendered)
-			continue
-		}
-		rendered.Value = formatInput(field, object)
-		if submitted != nil {
-			rendered.Value = submitted.Get(name)
-		}
-		switch {
-		case len(field.Choices) > 0:
-			rendered.Widget = "select"
-			if field.Nullable || field.Blank {
-				rendered.Choices = append(rendered.Choices, choiceOption{Value: "", Label: "---------", Selected: rendered.Value == ""})
-			}
-			for _, choice := range field.Choices {
-				value := fmt.Sprint(choice)
-				rendered.Choices = append(rendered.Choices, choiceOption{Value: value, Label: field.ChoiceLabel(choice), Selected: value == rendered.Value})
-			}
-		case field.Kind == models.KindChar:
-			rendered.Widget, rendered.InputType = "input", "text"
-			if strings.Contains(field.Column, "email") {
-				rendered.InputType = "email"
-			}
-			if strings.Contains(field.Column, "url") || strings.Contains(field.Column, "website") {
-				rendered.InputType = "url"
-			}
-		case field.Kind == models.KindText:
-			rendered.Widget, rendered.Wide = "textarea", true
-		case field.Kind == models.KindInt || field.Kind == models.KindInt32 || field.Kind == models.KindInt64:
-			rendered.Widget, rendered.InputType, rendered.Step = "input", "number", "1"
-		case field.Kind == models.KindFloat:
-			rendered.Widget, rendered.InputType, rendered.Step = "input", "number", "any"
-		case field.Kind == models.KindDecimal:
-			rendered.Widget, rendered.InputType = "input", "number"
-			rendered.Step = decimal.New(1, -int32(field.Places)).String()
-		case field.Kind == models.KindDate:
-			rendered.Widget, rendered.InputType = "input", "date"
-		case field.Kind == models.KindBool && field.Nullable:
-			rendered.Widget = "select"
-			rendered.Choices = []choiceOption{
-				{Value: "", Label: s.translate("Unknown"), Selected: rendered.Value == ""},
-				{Value: "true", Label: s.translate("Yes"), Selected: rendered.Value == "true"},
-				{Value: "false", Label: s.translate("No"), Selected: rendered.Value == "false"},
-			}
-		case field.Kind == models.KindBool:
-			rendered.Widget = "checkbox"
-			rendered.Checked = rendered.Value == "true"
-			if submitted != nil {
-				rendered.Checked = submitted.Has(name)
-			}
-		case field.Kind == models.KindDateTime:
-			rendered.Widget, rendered.InputType = "input", "datetime-local"
-		case field.Kind == models.KindJSON:
-			rendered.Widget, rendered.Wide = "json", true
-		case field.Kind == models.KindForeignKey:
-			related := field.Related()
-			relatedEntry := s.entryFor(related)
-			if relatedEntry != nil && s.permissionsFor(r, relatedEntry).View {
-				rendered.Widget = "fk"
-				rendered.AutocompleteURL = s.modelURL(related) + "autocomplete/"
-				if id, err := strconv.ParseInt(rendered.Value, 10, 64); err == nil && id > 0 {
-					if selected, err := relatedEntry.viewQuerySet(r).GetByPK(r.Context(), id); err == nil {
-						_ = loadLabels(r.Context(), related, []any{selected})
-						rendered.SelectedLabel = related.DisplayString(selected)
-					} else {
-						rendered.SelectedLabel = fmt.Sprintf("#%d", id)
-					}
-				}
-			} else {
-				rendered.Widget, rendered.InputType, rendered.Step = "input", "number", "1"
-				rendered.Help = strings.TrimSpace(rendered.Help + " " + s.translatef("Enter the %s ID.", s.modelName(related)))
-			}
-		default:
-			rendered.Widget, rendered.InputType = "input", "text"
-		}
-		fields = append(fields, rendered)
+		fields = append(fields, s.buildFormField(r, field, name, object, fieldEditable, submitted, fieldErrors[name]))
 	}
 	return fields
+}
+
+// buildFormField renders field of object as the input called name. Read-only foreign keys show
+// their label only when the related object was preloaded.
+func (s *Site) buildFormField(r *Request, field *models.Field, name string, object any, editable bool, submitted url.Values, fieldError string) formField {
+	rendered := formField{
+		Name: name, Label: s.translate(field.VerboseName), Help: s.translate(field.HelpText), Error: fieldError,
+		Nullable: field.Nullable, MaxLength: field.MaxLength,
+		Required: !field.Blank && !field.Nullable && field.Kind != models.KindBool,
+	}
+	if !editable {
+		rendered.Widget, rendered.ReadOnly = "readonly", true
+		rendered.Display = displayValue(s, r, field, object)
+		return rendered
+	}
+	rendered.Value = formatInput(field, object)
+	if submitted != nil {
+		rendered.Value = submitted.Get(name)
+	}
+	switch {
+	case len(field.Choices) > 0:
+		rendered.Widget = "select"
+		if field.Nullable || field.Blank {
+			rendered.Choices = append(rendered.Choices, choiceOption{Value: "", Label: "---------", Selected: rendered.Value == ""})
+		}
+		for _, choice := range field.Choices {
+			value := fmt.Sprint(choice)
+			rendered.Choices = append(rendered.Choices, choiceOption{Value: value, Label: field.ChoiceLabel(choice), Selected: value == rendered.Value})
+		}
+	case field.Kind == models.KindChar:
+		rendered.Widget, rendered.InputType = "input", "text"
+		if strings.Contains(field.Column, "email") {
+			rendered.InputType = "email"
+		}
+		if strings.Contains(field.Column, "url") || strings.Contains(field.Column, "website") {
+			rendered.InputType = "url"
+		}
+	case field.Kind == models.KindText:
+		rendered.Widget, rendered.Wide = "textarea", true
+	case field.Kind == models.KindInt || field.Kind == models.KindInt32 || field.Kind == models.KindInt64:
+		rendered.Widget, rendered.InputType, rendered.Step = "input", "number", "1"
+	case field.Kind == models.KindFloat:
+		rendered.Widget, rendered.InputType, rendered.Step = "input", "number", "any"
+	case field.Kind == models.KindDecimal:
+		rendered.Widget, rendered.InputType = "input", "number"
+		rendered.Step = decimal.New(1, -int32(field.Places)).String()
+	case field.Kind == models.KindDate:
+		rendered.Widget, rendered.InputType = "input", "date"
+	case field.Kind == models.KindBool && field.Nullable:
+		rendered.Widget = "select"
+		rendered.Choices = []choiceOption{
+			{Value: "", Label: s.translate("Unknown"), Selected: rendered.Value == ""},
+			{Value: "true", Label: s.translate("Yes"), Selected: rendered.Value == "true"},
+			{Value: "false", Label: s.translate("No"), Selected: rendered.Value == "false"},
+		}
+	case field.Kind == models.KindBool:
+		rendered.Widget = "checkbox"
+		rendered.Checked = rendered.Value == "true"
+		if submitted != nil {
+			rendered.Checked = submitted.Has(name)
+		}
+	case field.Kind == models.KindDateTime:
+		rendered.Widget, rendered.InputType = "input", "datetime-local"
+	case field.Kind == models.KindJSON:
+		rendered.Widget, rendered.Wide = "json", true
+	case field.Kind == models.KindForeignKey:
+		related := field.Related()
+		relatedEntry := s.entryFor(related)
+		if relatedEntry != nil && s.permissionsFor(r, relatedEntry).View {
+			rendered.Widget = "fk"
+			rendered.AutocompleteURL = s.modelURL(related) + "autocomplete/"
+			if id, err := strconv.ParseInt(rendered.Value, 10, 64); err == nil && id > 0 {
+				if selected, err := relatedEntry.viewQuerySet(r).GetByPK(r.Context(), id); err == nil {
+					_ = loadLabels(r.Context(), related, []any{selected})
+					rendered.SelectedLabel = related.DisplayString(selected)
+				} else {
+					rendered.SelectedLabel = fmt.Sprintf("#%d", id)
+				}
+			}
+		} else {
+			rendered.Widget, rendered.InputType, rendered.Step = "input", "number", "1"
+			rendered.Help = strings.TrimSpace(rendered.Help + " " + s.translatef("Enter the %s ID.", s.modelName(related)))
+		}
+	default:
+		rendered.Widget, rendered.InputType = "input", "text"
+	}
+	return rendered
 }
 
 // parseInput converts a submitted string into a value for field.Set.
@@ -331,23 +337,29 @@ func (s *Site) bindForm(r *Request, entry modelEntry, object any, locked map[*mo
 			continue
 		}
 		name := field.LookupName()
-		value, err := parseInput(field, form.Get(name), form.Has(name))
-		if err != nil {
-			fieldErrors[name] = s.errorText(err)
-			continue
-		}
-		if field.Kind == models.KindForeignKey {
-			unchanged := field.Get(object) == value
-			if id, _ := value.(int64); id != 0 && !unchanged && !s.relatedVisible(r, field, id) {
-				fieldErrors[name] = s.translate("Select a valid choice. That choice is not one of the available choices.")
-				continue
-			}
-		}
-		if err := field.Set(object, value); err != nil {
-			fieldErrors[name] = s.errorText(err)
+		if message := s.bindValue(r, field, object, form, name); message != "" {
+			fieldErrors[name] = message
 		}
 	}
 	return fieldErrors
+}
+
+// bindValue copies the submitted value called name into field of object and returns the error message.
+func (s *Site) bindValue(r *Request, field *models.Field, object any, form url.Values, name string) string {
+	value, err := parseInput(field, form.Get(name), form.Has(name))
+	if err != nil {
+		return s.errorText(err)
+	}
+	if field.Kind == models.KindForeignKey {
+		unchanged := field.Get(object) == value
+		if id, _ := value.(int64); id != 0 && !unchanged && !s.relatedVisible(r, field, id) {
+			return s.translate("Select a valid choice. That choice is not one of the available choices.")
+		}
+	}
+	if err := field.Set(object, value); err != nil {
+		return s.errorText(err)
+	}
+	return ""
 }
 
 func (s *Site) relatedVisible(r *Request, field *models.Field, id int64) bool {

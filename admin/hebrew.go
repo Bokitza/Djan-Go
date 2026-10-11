@@ -80,6 +80,8 @@ var hebrew = map[string]string{
 	"Filter…":                            "סינון…",
 	"Nothing to choose from yet.":        "אין עדיין אפשרויות לבחירה.",
 	"Enter the %s ID.":                   "יש להזין את המזהה של %s.",
+	"Remove":                             "הסרה",
+	"Please correct the errors below.":   "יש לתקן את השגיאות שלהלן.",
 
 	// Messages
 	"The %s “%s” was added successfully.":                                     "%s „%s” נוסף בהצלחה.",

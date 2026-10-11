@@ -98,25 +98,27 @@
   <p class="mb-1.5 block text-sm font-medium text-zinc-500">{{.Label}}</p>
   <div class="min-h-9 rounded-lg bg-zinc-50 px-3 py-2 text-sm dark:bg-zinc-800/50">{{template "cell" .Display}}</div>
 
-  {{else if eq .Widget "textarea"}}
+  {{else}}
   {{template "label" .}}
-  <textarea id="field-{{.Name}}" name="{{.Name}}" rows="6" class="input {{if .Error}}input-error{{end}}">{{.Value}}</textarea>
+  {{template "control" .}}
   {{template "fieldFooter" .}}
+  {{end}}
+</div>
+{{end}}
+
+{{define "control"}}
+  {{if eq .Widget "textarea"}}
+  <textarea id="field-{{.Name}}" name="{{.Name}}" rows="6" class="input {{if .Error}}input-error{{end}}">{{.Value}}</textarea>
 
   {{else if eq .Widget "json"}}
-  {{template "label" .}}
   <textarea id="field-{{.Name}}" name="{{.Name}}" rows="8" spellcheck="false" class="input font-mono text-xs {{if .Error}}input-error{{end}}">{{.Value}}</textarea>
-  {{template "fieldFooter" .}}
 
   {{else if eq .Widget "select"}}
-  {{template "label" .}}
   <select id="field-{{.Name}}" name="{{.Name}}" class="input pe-8 {{if .Error}}input-error{{end}}">
     {{range .Choices}}<option value="{{.Value}}" {{if .Selected}}selected{{end}}>{{.Label}}</option>{{end}}
   </select>
-  {{template "fieldFooter" .}}
 
   {{else if eq .Widget "fk"}}
-  {{template "label" .}}
   <div x-data="combobox({{json .Value}}, {{json .SelectedLabel}})" class="relative" @click.outside="open = false">
     <input type="hidden" name="{{.Name}}" :value="value">
     <button type="button" @click="open = !open; $nextTick(() => $refs.search.focus())"
@@ -140,15 +142,11 @@
       </div>
     </div>
   </div>
-  {{template "fieldFooter" .}}
 
   {{else}}
-  {{template "label" .}}
   <input type="{{.InputType}}" id="field-{{.Name}}" name="{{.Name}}" value="{{.Value}}" {{if .MaxLength}}maxlength="{{.MaxLength}}"{{end}} {{if .Step}}step="{{.Step}}"{{end}}
          class="input {{if .Error}}input-error{{end}}">
-  {{template "fieldFooter" .}}
   {{end}}
-</div>
 {{end}}
 
 {{define "extra"}}
@@ -196,5 +194,91 @@
       {{end}}
     </div>
   </div>
+{{else if eq .Widget "inline"}}
+  {{template "inline" .Inline}}
 {{end}}
+{{end}}
+
+{{define "inline"}}
+<div x-data="inlineFormset({{.Total}})">
+  <input type="hidden" name="{{.TotalName}}" value="{{.Total}}" :value="total">
+  {{if .Stacked}}
+  <div x-ref="rows" class="space-y-4">
+    {{range .Rows}}{{template "inlineStacked" .}}{{end}}
+  </div>
+  {{if .Empty}}<template x-ref="template">{{template "inlineStacked" .Empty}}</template>{{end}}
+  {{else}}
+  <div class="rounded-xl ring-1 ring-zinc-200 dark:ring-zinc-800">
+    <table class="w-full text-sm">
+      <thead>
+        <tr class="border-b border-zinc-200 dark:border-zinc-800">
+          {{range .Headers}}
+          <th class="px-2 py-2 text-start text-xs font-medium text-zinc-500" {{if .Help}}title="{{.Help}}"{{end}}>{{.Label}}{{if .Required}}<span class="text-rose-500"> *</span>{{end}}</th>
+          {{end}}
+          <th class="w-px"></th>
+        </tr>
+      </thead>
+      <tbody x-ref="rows" class="divide-y divide-zinc-100 dark:divide-zinc-800">
+        {{range .Rows}}{{template "inlineTabular" .}}{{end}}
+      </tbody>
+    </table>
+  </div>
+  {{if .Empty}}<template x-ref="template">{{template "inlineTabular" .Empty}}</template>{{end}}
+  {{end}}
+  {{if and (not .Rows) (not .Empty)}}<p class="px-3 py-6 text-center text-sm text-zinc-500">{{t "Nothing here yet."}}</p>{{end}}
+  {{if .Empty}}
+  <button type="button" @click="add()" class="button button-secondary mt-3">{{icon "plus"}} {{.AddLabel}}</button>
+  {{end}}
+</div>
+{{end}}
+
+{{define "inlineErrors"}}
+{{if .Errors}}<div class="flex gap-2 rounded-lg bg-rose-50 p-2 text-xs text-rose-700 dark:bg-rose-500/10 dark:text-rose-300">{{icon "alert" "size-3.5"}}<div>{{range .Errors}}<p>{{.}}</p>{{end}}</div></div>{{end}}
+{{end}}
+
+{{define "inlineActions"}}
+<input type="hidden" name="{{.Key}}id" value="{{if .ID}}{{.ID}}{{end}}">
+<div class="flex items-center justify-end gap-3">
+  {{if .URL}}<a href="{{.URL}}" title="{{t "Edit"}}" class="text-zinc-400 hover:text-indigo-600 dark:hover:text-indigo-400">{{icon "pencil"}}</a>{{end}}
+  {{if .CanDelete}}
+  <label class="inline-flex cursor-pointer items-center gap-1.5 text-xs text-zinc-500">
+    <input type="checkbox" name="{{.Key}}DELETE" value="on" {{if .Deleted}}checked{{end}} class="size-4 rounded border-zinc-300 text-rose-600 focus:ring-rose-500 dark:border-zinc-600 dark:bg-zinc-800">
+    {{t "Delete"}}
+  </label>
+  {{else if .New}}
+  <button type="button" title="{{t "Remove"}}" @click="$el.closest('[data-inline-row]').remove()" class="text-zinc-400 hover:text-rose-600">{{icon "x"}}</button>
+  {{end}}
+</div>
+{{end}}
+
+{{define "inlineTabular"}}
+<tr data-inline-row class="align-top">
+  {{range .Fields}}
+  <td class="px-2 py-2">
+    {{if eq .Widget "checkbox"}}<input type="checkbox" id="field-{{.Name}}" name="{{.Name}}" value="true" {{if .Checked}}checked{{end}} class="mt-2.5 size-4 rounded border-zinc-300 text-indigo-600 focus:ring-indigo-500 dark:border-zinc-600 dark:bg-zinc-800">
+    {{else if eq .Widget "readonly"}}<div class="py-2">{{template "cell" .Display}}</div>
+    {{else}}{{template "control" .}}{{end}}
+    {{if .Error}}<p class="mt-1 text-xs text-rose-600 dark:text-rose-400">{{.Error}}</p>{{end}}
+  </td>
+  {{end}}
+  <td class="px-2 py-2 pt-4 whitespace-nowrap">
+    {{template "inlineActions" .}}
+    {{template "inlineErrors" .}}
+  </td>
+</tr>
+{{end}}
+
+{{define "inlineStacked"}}
+<div data-inline-row class="rounded-xl ring-1 ring-zinc-200 dark:ring-zinc-800">
+  <div class="flex items-center justify-between gap-3 border-b border-zinc-100 px-4 py-2.5 dark:border-zinc-800">
+    <p class="truncate text-sm font-medium">{{.Label}}</p>
+    {{template "inlineActions" .}}
+  </div>
+  <div class="space-y-4 p-4">
+    {{template "inlineErrors" .}}
+    <div class="grid gap-x-6 gap-y-5 sm:grid-cols-2">
+      {{range .Fields}}{{template "field" .}}{{end}}
+    </div>
+  </div>
+</div>
 {{end}}

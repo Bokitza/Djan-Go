@@ -11,11 +11,12 @@ import (
 	"github.com/Bokitza/djan-go/query"
 )
 
-// extraField is a form section that is not a model column (passwords, many-to-many links).
+// extraField is a form section that is not a model column (passwords, many-to-many links, inlines).
 type extraField interface {
 	name() string
 	render(r *Request, object any, isNew, editable bool, submitted url.Values) (extraView, error)
-	validate(r *Request, isNew bool, form url.Values) string
+	// validate runs after the submitted form was bound to object, before anything is saved.
+	validate(r *Request, object any, isNew bool, form url.Values) string
 	save(r *Request, object any, form url.Values) error
 }
 
@@ -31,9 +32,10 @@ type extraOptionGroup struct {
 
 type extraView struct {
 	Name, Label, Help, Widget, Error string
-	ReadOnly, Required               bool
+	ReadOnly, Required, Hidden       bool
 	Groups                           []extraOptionGroup
 	Count                            int
+	Inline                           *inlineView
 }
 
 func registerAuthAdmins(site *Site) {
@@ -104,7 +106,7 @@ func (passwordExtra) render(r *Request, object any, isNew, editable bool, submit
 	return view, nil
 }
 
-func (passwordExtra) validate(r *Request, isNew bool, form url.Values) string {
+func (passwordExtra) validate(r *Request, _ any, isNew bool, form url.Values) string {
 	password, confirmation := form.Get("new_password"), form.Get("new_password_confirm")
 	switch {
 	case password == "" && isNew:
@@ -214,7 +216,7 @@ func (userGroupsExtra) render(r *Request, object any, isNew, editable bool, subm
 	return view, nil
 }
 
-func (userGroupsExtra) validate(*Request, bool, url.Values) string { return "" }
+func (userGroupsExtra) validate(*Request, any, bool, url.Values) string { return "" }
 
 func (userGroupsExtra) save(r *Request, object any, form url.Values) error {
 	if !r.User.IsSuperuser {
@@ -258,7 +260,7 @@ func (userPermissionsExtra) render(r *Request, object any, isNew, editable bool,
 	return view, err
 }
 
-func (userPermissionsExtra) validate(*Request, bool, url.Values) string { return "" }
+func (userPermissionsExtra) validate(*Request, any, bool, url.Values) string { return "" }
 
 func (userPermissionsExtra) save(r *Request, object any, form url.Values) error {
 	if !r.User.IsSuperuser {
@@ -301,7 +303,7 @@ func (groupPermissionsExtra) render(r *Request, object any, isNew, editable bool
 	return view, err
 }
 
-func (groupPermissionsExtra) validate(*Request, bool, url.Values) string { return "" }
+func (groupPermissionsExtra) validate(*Request, any, bool, url.Values) string { return "" }
 
 func (groupPermissionsExtra) save(r *Request, object any, form url.Values) error {
 	if !r.User.IsSuperuser {

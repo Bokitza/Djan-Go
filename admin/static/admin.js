@@ -116,6 +116,16 @@ document.addEventListener('alpine:init', () => {
       this.label = ''
     },
   }))
+
+  Alpine.data('inlineFormset', (total) => ({
+    total,
+    add() {
+      const html = this.$refs.template.innerHTML.replaceAll('__prefix__', this.total)
+      this.total++
+      this.$refs.rows.insertAdjacentHTML('beforeend', html)
+      htmx.process(this.$refs.rows.lastElementChild)
+    },
+  }))
 })
 
 window.exportURL = (base, format, resource) => {
