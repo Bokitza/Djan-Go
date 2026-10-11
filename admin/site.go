@@ -38,12 +38,13 @@ type Site struct {
 	appLabels map[string]string
 	entries   []modelEntry
 	byKey     map[string]modelEntry
+	lookups   map[string]*relatedLookup
 	templates map[string]*template.Template
 }
 
 // NewSite creates an admin site. The auth User and Group models are registered automatically.
 func NewSite(title string) *Site {
-	site := &Site{Title: title, Prefix: "/admin", byKey: map[string]modelEntry{}}
+	site := &Site{Title: title, Prefix: "/admin", byKey: map[string]modelEntry{}, lookups: map[string]*relatedLookup{}}
 	registerAuthAdmins(site)
 	return site
 }
@@ -184,6 +185,19 @@ func Register[T any](site *Site, modelAdmin ModelAdmin[T]) {
 	registered := &entry[T]{model: info, admin: modelAdmin, resolved: resolved}
 	site.entries = append(site.entries, registered)
 	site.byKey[key] = registered
+	for _, filter := range resolved.filters {
+		if filter.autocomplete != nil {
+			site.lookups[filter.autocomplete.key] = filter.autocomplete
+		}
+	}
+	for _, lookup := range resolved.related {
+		site.lookups[lookup.key] = lookup
+	}
+	for _, editor := range inlines {
+		for _, lookup := range editor.(interface{ relatedLookups() []*relatedLookup }).relatedLookups() {
+			site.lookups[lookup.key] = lookup
+		}
+	}
 }
 
 // Unregister removes a model (for example the built-in auth admins) from the site.
@@ -194,6 +208,11 @@ func Unregister[T any](site *Site) {
 	}
 	delete(site.byKey, info.App+"/"+info.Key())
 	site.entries = slices.DeleteFunc(site.entries, func(entry modelEntry) bool { return entry.info() == info })
+	for key := range site.lookups {
+		if strings.HasPrefix(key, info.App+"/"+info.Key()+"/") {
+			delete(site.lookups, key)
+		}
+	}
 }
 
 // Check verifies that the models behind every registered admin are valid.

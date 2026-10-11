@@ -117,6 +117,14 @@ document.addEventListener('alpine:init', () => {
     },
   }))
 
+  Alpine.data('autocompleteFilter', (selectURL) => ({
+    open: false,
+    choose(element) {
+      this.open = false
+      window.location.href = selectURL.replace('__id__', encodeURIComponent(element.dataset.id))
+    },
+  }))
+
   Alpine.data('inlineFormset', (total) => ({
     total,
     add() {

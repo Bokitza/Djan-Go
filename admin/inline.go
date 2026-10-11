@@ -63,8 +63,9 @@ type InlineAdmin[T, C any] struct {
 
 // InlineConfig collects the column options of an inline. It is filled by InlineAdmin.Configure.
 type InlineConfig struct {
-	fields   []Field
-	readonly []Field
+	fields           []Field
+	readonly         []Field
+	relatedQuerySets []relatedRule
 }
 
 // Fields sets the columns (default: every editable field except the foreign key to the parent).
@@ -73,12 +74,16 @@ func (c *InlineConfig) Fields(fields ...Field) { c.fields = fields }
 // Readonly shows fields without allowing edits.
 func (c *InlineConfig) Readonly(fields ...Field) { c.readonly = append(c.readonly, fields...) }
 
+func (c *InlineConfig) addRelatedQuerySet(rule relatedRule) {
+	c.relatedQuerySets = append(c.relatedQuerySets, rule)
+}
+
 func (a InlineAdmin[T, C]) editorFor(*T) (extraField, error) {
 	child, ok := models.InfoFor[C]()
 	if !ok {
 		return nil, fmt.Errorf("model %s is not registered; call models.Register first", reflect.TypeFor[C]())
 	}
-	editor := &inlineEditor[T, C]{admin: a, child: child, readonly: map[*models.Field]bool{}}
+	editor := &inlineEditor[T, C]{admin: a, child: child, readonly: map[*models.Field]bool{}, related: map[*models.Field]*relatedLookup{}}
 	parentType := reflect.TypeFor[T]()
 	if a.ForeignKey != nil {
 		pointer := a.ForeignKey((*C)(child.Probe()))
@@ -142,6 +147,22 @@ func (a InlineAdmin[T, C]) editorFor(*T) (extraField, error) {
 		}
 		editor.readonly[field] = true
 	}
+	if len(config.relatedQuerySets) > 0 {
+		parent, ok := models.InfoFor[T]()
+		if !ok {
+			return nil, fmt.Errorf("model %s is not registered; call models.Register first", parentType)
+		}
+		for _, rule := range config.relatedQuerySets {
+			lookup, err := resolveRelatedRule(child, rule, lookupKey(parent, "inline/"+editor.prefix))
+			if err != nil {
+				return nil, fmt.Errorf("RelatedQuerySet of %s: %w", child.Name, err)
+			}
+			if editor.related[lookup.field] != nil {
+				return nil, fmt.Errorf("RelatedQuerySet of %s: %s is set twice", child.Name, lookup.field)
+			}
+			editor.related[lookup.field] = lookup
+		}
+	}
 	return editor, nil
 }
 
@@ -151,7 +172,28 @@ type inlineEditor[T, C any] struct {
 	foreignKey *models.Field
 	fields     []*models.Field
 	readonly   map[*models.Field]bool
+	related    map[*models.Field]*relatedLookup
 	prefix     string
+}
+
+func (e *inlineEditor[T, C]) relatedLookups() []*relatedLookup {
+	lookups := make([]*relatedLookup, 0, len(e.related))
+	for _, lookup := range e.related {
+		lookups = append(lookups, lookup)
+	}
+	return lookups
+}
+
+// lookup narrows the rows a foreign key of the inline offers: the inline's RelatedQuerySet, else
+// the one of C's admin.
+func (e *inlineEditor[T, C]) lookup(r *Request, field *models.Field) *relatedLookup {
+	if lookup := e.related[field]; lookup != nil {
+		return lookup
+	}
+	if childEntry := r.Site.entryFor(e.child); childEntry != nil {
+		return childEntry.config().related[field]
+	}
+	return nil
 }
 
 // maxInlineRows caps the rows read from one submitted inline.
@@ -312,7 +354,7 @@ func (e *inlineEditor[T, C]) bindRow(r *Request, row *inlineRow, form url.Values
 		}
 		name := key + field.LookupName()
 		before := formatInput(field, row.object)
-		if message := r.Site.bindValue(r, field, row.object, form, name); message != "" {
+		if message := r.Site.bindValue(r, field, row.object, form, name, e.lookup(r, field)); message != "" {
 			row.errors[name] = message
 			row.changed = row.changed || form.Get(name) != before
 			continue
@@ -511,7 +553,7 @@ func (e *inlineEditor[T, C]) renderRow(r *Request, row *inlineRow, submitted url
 	}
 	for _, field := range e.fields {
 		name := key + field.LookupName()
-		rendered.Fields = append(rendered.Fields, site.buildFormField(r, field, name, row.object, e.fieldEditable(row, field), submitted, row.errors[name]))
+		rendered.Fields = append(rendered.Fields, site.buildFormField(r, field, name, row.object, e.fieldEditable(row, field), submitted, row.errors[name], e.lookup(r, field)))
 	}
 	return rendered
 }

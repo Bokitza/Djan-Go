@@ -242,7 +242,7 @@ func (e *entry[T]) checkImportAllowed(r *Request, permissions Permissions, objec
 		if id == 0 || (original != nil && field.Get(original) == field.Get(object)) {
 			continue
 		}
-		if !r.Site.relatedVisible(r, field, id) {
+		if !r.Site.relatedVisible(r, field, id, e.resolved.related[field]) {
 			return invalid("%s: select a valid choice; %s #%d is not one of the available choices.",
 				r.Site.translate(field.VerboseName), strings.ToLower(r.Site.modelName(field.Related())), id)
 		}

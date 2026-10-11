@@ -113,14 +113,24 @@ func (s *Site) buildFormFields(r *Request, entry modelEntry, object any, editabl
 				_ = loadLabels(r.Context(), field.Related(), loadedTargets(field, []any{object}))
 			}
 		}
-		fields = append(fields, s.buildFormField(r, field, name, object, fieldEditable, submitted, fieldErrors[name]))
+		fields = append(fields, s.buildFormField(r, field, name, object, fieldEditable, submitted, fieldErrors[name], entry.config().related[field]))
 	}
 	return fields
 }
 
+// autocompleteURL searches the related rows of a foreign key, narrowed by lookup when it is set.
+func (s *Site) autocompleteURL(field *models.Field, lookup *relatedLookup) string {
+	address := s.modelURL(field.Related()) + "autocomplete/"
+	if lookup != nil {
+		address += "?lookup=" + url.QueryEscape(lookup.key)
+	}
+	return address
+}
+
 // buildFormField renders field of object as the input called name. Read-only foreign keys show
-// their label only when the related object was preloaded.
-func (s *Site) buildFormField(r *Request, field *models.Field, name string, object any, editable bool, submitted url.Values, fieldError string) formField {
+// their label only when the related object was preloaded. lookup narrows the rows a foreign key
+// offers and may be nil.
+func (s *Site) buildFormField(r *Request, field *models.Field, name string, object any, editable bool, submitted url.Values, fieldError string, lookup *relatedLookup) formField {
 	rendered := formField{
 		Name: name, Label: s.translate(field.VerboseName), Help: s.translate(field.HelpText), Error: fieldError,
 		Nullable: field.Nullable, MaxLength: field.MaxLength,
@@ -186,7 +196,7 @@ func (s *Site) buildFormField(r *Request, field *models.Field, name string, obje
 		relatedEntry := s.entryFor(related)
 		if relatedEntry != nil && s.permissionsFor(r, relatedEntry).View {
 			rendered.Widget = "fk"
-			rendered.AutocompleteURL = s.modelURL(related) + "autocomplete/"
+			rendered.AutocompleteURL = s.autocompleteURL(field, lookup)
 			if id, err := strconv.ParseInt(rendered.Value, 10, 64); err == nil && id > 0 {
 				if selected, err := relatedEntry.viewQuerySet(r).GetByPK(r.Context(), id); err == nil {
 					_ = loadLabels(r.Context(), related, []any{selected})
@@ -337,22 +347,23 @@ func (s *Site) bindForm(r *Request, entry modelEntry, object any, locked map[*mo
 			continue
 		}
 		name := field.LookupName()
-		if message := s.bindValue(r, field, object, form, name); message != "" {
+		if message := s.bindValue(r, field, object, form, name, entry.config().related[field]); message != "" {
 			fieldErrors[name] = message
 		}
 	}
 	return fieldErrors
 }
 
-// bindValue copies the submitted value called name into field of object and returns the error message.
-func (s *Site) bindValue(r *Request, field *models.Field, object any, form url.Values, name string) string {
+// bindValue copies the submitted value called name into field of object and returns the error
+// message. lookup narrows the rows a foreign key accepts and may be nil.
+func (s *Site) bindValue(r *Request, field *models.Field, object any, form url.Values, name string, lookup *relatedLookup) string {
 	value, err := parseInput(field, form.Get(name), form.Has(name))
 	if err != nil {
 		return s.errorText(err)
 	}
 	if field.Kind == models.KindForeignKey {
 		unchanged := field.Get(object) == value
-		if id, _ := value.(int64); id != 0 && !unchanged && !s.relatedVisible(r, field, id) {
+		if id, _ := value.(int64); id != 0 && !unchanged && !s.relatedVisible(r, field, id, lookup) {
 			return s.translate("Select a valid choice. That choice is not one of the available choices.")
 		}
 	}
@@ -362,14 +373,18 @@ func (s *Site) bindValue(r *Request, field *models.Field, object any, form url.V
 	return ""
 }
 
-func (s *Site) relatedVisible(r *Request, field *models.Field, id int64) bool {
+func (s *Site) relatedVisible(r *Request, field *models.Field, id int64, lookup *relatedLookup) bool {
 	related := field.Related()
 	queryset := query.ForModel(related)
 	if relatedEntry := s.entryFor(related); relatedEntry != nil {
-		if !s.permissionsFor(r, relatedEntry).View {
-			return r.User.IsSuperuser
+		if s.permissionsFor(r, relatedEntry).View {
+			queryset = relatedEntry.viewQuerySet(r)
+		} else if !r.User.IsSuperuser {
+			return false
 		}
-		queryset = relatedEntry.viewQuerySet(r)
+	}
+	if lookup != nil && lookup.querySet != nil {
+		queryset = lookup.querySet(r, queryset)
 	}
 	_, err := queryset.GetByPK(r.Context(), id)
 	return err == nil

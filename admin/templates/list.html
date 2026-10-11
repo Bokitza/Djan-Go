@@ -42,11 +42,22 @@
     </div>
     {{end}}
     {{range $page.Filters}}
-    <div x-data="{ open: false }" class="relative" @click.outside="open = false">
-      <button type="button" @click="open = !open" class="button {{if .Active}}bg-indigo-50 text-indigo-700 ring-1 ring-indigo-200 ring-inset dark:bg-indigo-500/10 dark:text-indigo-300 dark:ring-indigo-500/30{{else}}button-secondary{{end}}">
+    <div x-data="{{if .SearchURL}}autocompleteFilter({{json .SelectURL}}){{else}}{ open: false }{{end}}" class="relative" @click.outside="open = false">
+      <button type="button" @click="open = !open{{if .SearchURL}}; $nextTick(() => $refs.search.focus()){{end}}" class="button {{if .Active}}bg-indigo-50 text-indigo-700 ring-1 ring-indigo-200 ring-inset dark:bg-indigo-500/10 dark:text-indigo-300 dark:ring-indigo-500/30{{else}}button-secondary{{end}}">
         {{icon "filter" "size-3.5"}} {{.Label}} <span class="text-zinc-400">{{icon "chevron-down" "size-3.5"}}</span>
       </button>
-      <div x-cloak x-show="open" x-transition.origin.top class="absolute start-0 z-20 mt-2 max-h-80 w-56 overflow-y-auto rounded-xl bg-white p-1.5 shadow-lg ring-1 ring-zinc-950/10 dark:bg-zinc-900 dark:ring-white/10">
+      <div x-cloak x-show="open" x-transition.origin.top class="absolute start-0 z-20 mt-2 max-h-80 {{if .SearchURL}}w-72{{else}}w-56{{end}} overflow-y-auto rounded-xl bg-white p-1.5 shadow-lg ring-1 ring-zinc-950/10 dark:bg-zinc-900 dark:ring-white/10">
+        {{if .SearchURL}}
+        <div class="relative mb-1">
+          <span class="pointer-events-none absolute inset-y-0 start-3 flex items-center text-zinc-400">{{icon "search" "size-3.5"}}</span>
+          <input x-ref="search" type="search" name="q" autocomplete="off" placeholder="{{t "Type to search…"}}"
+                 hx-get="{{.SearchURL}}" hx-trigger="focus once, input changed delay:200ms" hx-target="next [data-options]" hx-select="unset" hx-swap="innerHTML"
+                 class="w-full rounded-lg border-0 bg-zinc-50 py-2 pe-3 ps-8 text-sm ring-0 outline-none focus:ring-2 focus:ring-indigo-500 dark:bg-zinc-800">
+        </div>
+        <div data-options class="max-h-60 overflow-y-auto border-b border-zinc-100 pb-1 mb-1 dark:border-zinc-800">
+          <p class="px-3 py-6 text-center text-sm text-zinc-500">{{t "Loading…"}}</p>
+        </div>
+        {{end}}
         {{range .Options}}
         <a href="{{.URL}}" class="flex items-center justify-between rounded-lg px-3 py-2 text-sm {{if .Active}}bg-indigo-50 font-medium text-indigo-700 dark:bg-indigo-500/10 dark:text-indigo-300{{else}}text-zinc-700 hover:bg-zinc-50 dark:text-zinc-300 dark:hover:bg-zinc-800{{end}}">
           <span class="truncate">{{.Label}}</span>{{if .Active}}{{icon "check" "size-3.5"}}{{end}}

@@ -44,7 +44,8 @@ func RegisterAdmin(site *admin.Site) {
 				admin.F(&p.PublishedAt),
 			)
 			config.SearchFields(&p.Title, &p.Body)
-			config.ListFilter(admin.F(&p.Status), admin.F(&p.Author), admin.F(&p.Featured), admin.F(&p.PublishedAt))
+			config.ListFilter(admin.F(&p.Status), admin.F(&p.Featured), admin.F(&p.PublishedAt))
+			admin.AutocompleteFilter(config, &p.Author, nil)
 		},
 		ViewQuerySet: func(r *admin.Request, posts query.QuerySet[Post]) query.QuerySet[Post] {
 			if r.User.IsSuperuser {
@@ -104,6 +105,9 @@ func RegisterAdmin(site *admin.Site) {
 		Configure: func(a *Author, config *admin.Config) {
 			config.ListDisplay(admin.F(&a.Name), admin.F(&a.Email), admin.Through(&a.User, func(u *auth.User) admin.Field { return admin.F(&u.Username) }).Labeled("Login"))
 			config.SearchFields(&a.Name, &a.Email)
+			admin.RelatedQuerySet(config, &a.User, func(r *admin.Request, users query.QuerySet[auth.User]) query.QuerySet[auth.User] {
+				return users.Where(func(u *auth.User) query.Cond { return query.Eq(&u.IsStaff, true) })
+			})
 		},
 		ChangeQuerySet: func(r *admin.Request, authors query.QuerySet[Author]) query.QuerySet[Author] {
 			if r.User.IsSuperuser {
@@ -154,7 +158,8 @@ func RegisterAdmin(site *admin.Site) {
 		Configure: func(c *Comment, config *admin.Config) {
 			config.ListDisplay(admin.F(&c.Name), admin.F(&c.Post), admin.F(&c.Approved), admin.F(&c.CreatedAt))
 			config.SearchFields(&c.Name, &c.Body)
-			config.ListFilter(admin.F(&c.Approved), admin.F(&c.Post), admin.F(&c.CreatedAt))
+			config.ListFilter(admin.F(&c.Approved), admin.F(&c.CreatedAt))
+			admin.AutocompleteFilter(config, &c.Post, nil)
 			config.PerPage(20)
 		},
 		ImportExport: &admin.ImportExport[Comment]{

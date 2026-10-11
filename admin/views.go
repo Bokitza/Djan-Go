@@ -97,6 +97,9 @@ type filterGroup struct {
 	Label   string
 	Active  bool
 	Options []filterOption
+	// SearchURL and SelectURL are set for autocomplete filters. SelectURL filters by the related
+	// row whose ID replaces __id__.
+	SearchURL, SelectURL string
 }
 
 type activeFilter struct{ Label, RemoveURL string }
@@ -237,6 +240,27 @@ func (s *Site) filterOptions(r *Request, entry modelEntry, field *models.Field) 
 	return options
 }
 
+// autocompleteFilterOptions returns the options an autocomplete filter lists without a search:
+// the related row it filters by and "None". ok is false when the user may not see the related model.
+func (s *Site) autocompleteFilterOptions(r *Request, field *models.Field, current string) (options []choiceOption, ok bool) {
+	related := field.Related()
+	relatedEntry := s.entryFor(related)
+	if relatedEntry == nil || !s.permissionsFor(r, relatedEntry).View {
+		return nil, false
+	}
+	if id, err := strconv.ParseInt(current, 10, 64); err == nil {
+		label := fmt.Sprintf("#%d", id)
+		if selected, err := relatedEntry.viewQuerySet(r).GetByPK(r.Context(), id); err == nil && loadLabels(r.Context(), related, []any{selected}) == nil {
+			label = related.DisplayString(selected)
+		}
+		options = append(options, choiceOption{Value: current, Label: label})
+	}
+	if field.Nullable {
+		options = append(options, choiceOption{Value: "null", Label: s.translate("None")})
+	}
+	return options, true
+}
+
 func filterCond(field *models.Field, raw string) (query.Cond, bool) {
 	if raw == "null" {
 		return query.FieldLookup(field, "isnull", true), true
@@ -284,9 +308,9 @@ func (s *Site) listQuerySet(r *Request, entry modelEntry, values url.Values) que
 	if search := strings.TrimSpace(values.Get("q")); search != "" && len(config.searchFields) > 0 {
 		queryset = queryset.Filter(searchCond(config.searchFields, search))
 	}
-	for _, field := range config.filters {
-		if current := values.Get(filterPrefix + field.LookupName()); current != "" {
-			if cond, ok := filterCond(field, current); ok {
+	for _, filter := range config.filters {
+		if current := values.Get(filterPrefix + filter.field.LookupName()); current != "" {
+			if cond, ok := filterCond(filter.field, current); ok {
 				queryset = queryset.Filter(cond)
 			}
 		}
@@ -322,13 +346,25 @@ func (s *Site) listView(w http.ResponseWriter, r *Request, entry modelEntry) {
 	}
 
 	var dropOnClear []string
-	for _, field := range config.filters {
+	for _, filter := range config.filters {
+		field := filter.field
 		parameter := filterPrefix + field.LookupName()
 		dropOnClear = append(dropOnClear, parameter)
 		current := values.Get(parameter)
 		fieldLabel := s.translate(field.VerboseName)
 		group := filterGroup{Label: fieldLabel, Options: []filterOption{{Label: s.translate("All"), URL: withQuery(values, parameter, "", "p"), Active: current == ""}}}
-		for _, option := range s.filterOptions(r, entry, field) {
+		var options []choiceOption
+		if filter.autocomplete != nil {
+			var visible bool
+			if options, visible = s.autocompleteFilterOptions(r, field, current); !visible {
+				continue
+			}
+			group.SearchURL = s.autocompleteURL(field, filter.autocomplete)
+			group.SelectURL = withQuery(values, parameter, "__id__", "p")
+		} else {
+			options = s.filterOptions(r, entry, field)
+		}
+		for _, option := range options {
 			active := option.Value == current
 			group.Options = append(group.Options, filterOption{Label: option.Label, URL: withQuery(values, parameter, option.Value, "p"), Active: active})
 			if active {
@@ -769,6 +805,16 @@ func (s *Site) autocomplete(w http.ResponseWriter, r *Request, entry modelEntry)
 	info := entry.info()
 	search := strings.TrimSpace(r.URL.Query().Get("q"))
 	queryset := entry.viewQuerySet(r)
+	if key := r.URL.Query().Get("lookup"); key != "" {
+		lookup := s.lookups[key]
+		if lookup == nil || lookup.field.Related() != info {
+			s.renderError(w, r, http.StatusNotFound, s.translate("Not found."))
+			return
+		}
+		if lookup.querySet != nil {
+			queryset = lookup.querySet(r, queryset)
+		}
+	}
 	if search != "" {
 		fields := entry.config().searchFields
 		if len(fields) == 0 {

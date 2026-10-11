@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"net/http"
 	"reflect"
+	"slices"
 	"strings"
 	"unsafe"
 
@@ -88,14 +89,64 @@ func (f Field) Labeled(label string) Field { f.label = label; return f }
 
 // Config collects list and form options. It is filled by ModelAdmin.Configure.
 type Config struct {
-	listDisplay  []Field
-	searchFields []Field
-	listFilter   []Field
-	readonly     []Field
-	readonlyWhen []conditionalReadonly
-	exclude      []Field
-	perPage      int
-	ordering     []models.OrderTerm
+	listDisplay         []Field
+	searchFields        []Field
+	listFilter          []Field
+	autocompleteFilters []relatedRule
+	relatedQuerySets    []relatedRule
+	readonly            []Field
+	readonlyWhen        []conditionalReadonly
+	exclude             []Field
+	perPage             int
+	ordering            []models.OrderTerm
+}
+
+// relatedQuerySetFunc narrows the related rows that can be picked for a foreign key.
+type relatedQuerySetFunc func(r *Request, related query.Dynamic) query.Dynamic
+
+// relatedRule is a foreign key with the rule that narrows the rows that can be picked for it.
+type relatedRule struct {
+	field    Field
+	querySet relatedQuerySetFunc
+}
+
+func newRelatedRule[R any](foreignKey *models.FK[R], querySet RuleFunc[R]) relatedRule {
+	rule := relatedRule{field: F(foreignKey)}
+	if querySet != nil {
+		rule.querySet = func(r *Request, related query.Dynamic) query.Dynamic {
+			return querySet(r, query.FromDynamic[R](related)).Dynamic()
+		}
+	}
+	return rule
+}
+
+// AutocompleteFilter adds a list filter on a foreign key that is picked by typing a search instead
+// of from a list of every related row (django-admin-autocomplete-filter). querySet narrows the
+// related rows that can be picked; nil offers every row the user may view. The related model must
+// be registered in the admin.
+//
+//	admin.AutocompleteFilter(config, &t.Owner, func(r *admin.Request, users query.QuerySet[auth.User]) query.QuerySet[auth.User] {
+//		return users.Where(func(u *auth.User) query.Cond { return query.Eq(&u.IsActive, true) })
+//	})
+func AutocompleteFilter[R any](config *Config, foreignKey *models.FK[R], querySet RuleFunc[R]) {
+	config.autocompleteFilters = append(config.autocompleteFilters, newRelatedRule(foreignKey, querySet))
+}
+
+// RelatedQuerySetter is implemented by Config and InlineConfig.
+type RelatedQuerySetter interface {
+	addRelatedQuerySet(rule relatedRule)
+}
+
+// RelatedQuerySet narrows the rows that can be picked for a foreign key on the form (Django's
+// formfield_for_foreignkey queryset). It applies to the search box of the field and is checked
+// again when the form is saved; a value that is already stored stays valid. It works on Config
+// and InlineConfig.
+func RelatedQuerySet[R any](config RelatedQuerySetter, foreignKey *models.FK[R], querySet RuleFunc[R]) {
+	config.addRelatedQuerySet(newRelatedRule(foreignKey, querySet))
+}
+
+func (c *Config) addRelatedQuerySet(rule relatedRule) {
+	c.relatedQuerySets = append(c.relatedQuerySets, rule)
 }
 
 type conditionalReadonly struct {
@@ -151,10 +202,40 @@ func (c column) sortKey() string {
 	return c.field.LookupName()
 }
 
+// relatedLookup is a resolved relatedRule. The key names it in autocomplete URLs.
+type relatedLookup struct {
+	key      string
+	field    *models.Field
+	querySet relatedQuerySetFunc
+}
+
+// listFilter is a resolved list filter; autocomplete is nil for filters that list their options.
+type listFilter struct {
+	field        *models.Field
+	autocomplete *relatedLookup
+}
+
+// lookupKey prefixes the keys of the related lookups of model info.
+func lookupKey(info *models.ModelInfo, kind string) string {
+	return info.App + "/" + info.Key() + "/" + kind + "/"
+}
+
+func resolveRelatedRule(info *models.ModelInfo, rule relatedRule, keyPrefix string) (*relatedLookup, error) {
+	path, field, err := resolveField(info, rule.field)
+	if err == nil && len(path) > 0 {
+		err = fmt.Errorf("cannot use admin.Through")
+	}
+	if err != nil {
+		return nil, err
+	}
+	return &relatedLookup{key: keyPrefix + field.LookupName(), field: field, querySet: rule.querySet}, nil
+}
+
 type resolvedConfig struct {
 	columns      []column
 	searchFields []*models.Field
-	filters      []*models.Field
+	filters      []listFilter
+	related      map[*models.Field]*relatedLookup
 	readonly     map[*models.Field]bool
 	readonlyWhen []resolvedReadonly
 	exclude      map[*models.Field]bool
@@ -186,7 +267,7 @@ func resolveField(info *models.ModelInfo, field Field) ([]*models.Field, *models
 
 func resolveConfig(info *models.ModelInfo, config *Config) (*resolvedConfig, []error) {
 	var problems []error
-	resolved := &resolvedConfig{readonly: map[*models.Field]bool{}, exclude: map[*models.Field]bool{}, perPage: config.perPage}
+	resolved := &resolvedConfig{related: map[*models.Field]*relatedLookup{}, readonly: map[*models.Field]bool{}, exclude: map[*models.Field]bool{}, perPage: config.perPage}
 	if resolved.perPage <= 0 {
 		resolved.perPage = 25
 	}
@@ -230,8 +311,32 @@ func resolveConfig(info *models.ModelInfo, config *Config) (*resolvedConfig, []e
 				problems = append(problems, fmt.Errorf("ListFilter: %s fields cannot be filtered (%s)", final.Kind, final))
 				continue
 			}
-			resolved.filters = append(resolved.filters, final)
+			resolved.filters = append(resolved.filters, listFilter{field: final})
 		}
+	}
+	for _, rule := range config.autocompleteFilters {
+		lookup, err := resolveRelatedRule(info, rule, lookupKey(info, "filter"))
+		if err != nil {
+			problems = append(problems, fmt.Errorf("AutocompleteFilter: %w", err))
+			continue
+		}
+		if slices.ContainsFunc(resolved.filters, func(filter listFilter) bool { return filter.field == lookup.field }) {
+			problems = append(problems, fmt.Errorf("AutocompleteFilter: %s is filtered twice", lookup.field))
+			continue
+		}
+		resolved.filters = append(resolved.filters, listFilter{field: lookup.field, autocomplete: lookup})
+	}
+	for _, rule := range config.relatedQuerySets {
+		lookup, err := resolveRelatedRule(info, rule, lookupKey(info, "form"))
+		if err != nil {
+			problems = append(problems, fmt.Errorf("RelatedQuerySet: %w", err))
+			continue
+		}
+		if resolved.related[lookup.field] != nil {
+			problems = append(problems, fmt.Errorf("RelatedQuerySet: %s is set twice", lookup.field))
+			continue
+		}
+		resolved.related[lookup.field] = lookup
 	}
 	for _, field := range config.readonly {
 		if final := local("Readonly", field); final != nil {
