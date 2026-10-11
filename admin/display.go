@@ -10,6 +10,7 @@ import (
 	"time"
 	"unicode/utf8"
 
+	"github.com/shopspring/decimal"
 	"github.com/yoav/djan-go/models"
 	"github.com/yoav/djan-go/query"
 )
@@ -65,14 +66,19 @@ func displayValue(site *Site, r *Request, field *models.Field, object any) cell 
 		return cell{Kind: "null"}
 	}
 	if len(field.Choices) > 0 {
-		return cell{Kind: "choice", Text: models.ChoiceLabel(value.Interface())}
+		return cell{Kind: "choice", Text: field.ChoiceLabel(value.Interface())}
 	}
 	switch field.Kind {
 	case models.KindBool:
 		return cell{Kind: "bool", Bool: value.Bool()}
 	case models.KindDateTime:
 		moment := value.Interface().(time.Time)
-		return cell{Kind: "datetime", Text: moment.Local().Format("Jan 2, 2006 15:04"), Full: moment.Local().Format(time.RFC1123)}
+		return cell{Kind: "datetime", Text: moment.Local().Format(site.dateTimeFormat()), Full: moment.Local().Format(time.RFC1123)}
+	case models.KindDate:
+		moment := value.Interface().(time.Time)
+		return cell{Kind: "datetime", Text: moment.Format(site.dateFormat()), Full: moment.Format(time.DateOnly)}
+	case models.KindDecimal:
+		return cell{Kind: "number", Text: formatNumber(value.Interface().(decimal.Decimal), field.Places)}
 	case models.KindJSON:
 		encoded, _ := json.Marshal(value.Interface())
 		return cell{Kind: "json", Text: truncate(string(encoded), 60), Full: string(encoded)}
@@ -98,6 +104,40 @@ func displayValue(site *Site, r *Request, field *models.Field, object any) cell 
 	return cell{Kind: "text", Text: truncate(text, 80), Full: text}
 }
 
+// loadLabels preloads the InLabel foreign keys of objects (and of what they reference) so their labels are complete.
+func loadLabels(ctx context.Context, info *models.ModelInfo, objects []any) error {
+	return loadLabelsUpTo(ctx, info, objects, 3)
+}
+
+func loadLabelsUpTo(ctx context.Context, info *models.ModelInfo, objects []any, depth int) error {
+	if depth == 0 || len(objects) == 0 {
+		return nil
+	}
+	for _, field := range info.Fields {
+		if !field.InLabel {
+			continue
+		}
+		if err := query.PreloadRelated(ctx, objects, field); err != nil {
+			return err
+		}
+		if err := loadLabelsUpTo(ctx, field.Related(), loadedTargets(field, objects), depth-1); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+// loadedTargets returns the already loaded objects that foreignKey points to from objects.
+func loadedTargets(foreignKey *models.Field, objects []any) []any {
+	var targets []any
+	for _, object := range objects {
+		if cached := foreignKey.Addr(object).Addr().MethodByName("Cached").Call(nil)[0]; !cached.IsNil() {
+			targets = append(targets, cached.Interface())
+		}
+	}
+	return targets
+}
+
 // followPath loads the foreign keys of path for objects and returns the final owners (nil when a link is NULL).
 func followPath(ctx context.Context, objects []any, path []*models.Field) ([]any, error) {
 	current := objects
@@ -116,9 +156,8 @@ func followPath(ctx context.Context, objects []any, path []*models.Field) ([]any
 			if object == nil {
 				continue
 			}
-			cached := foreignKey.Addr(object).Addr().MethodByName("Cached").Call(nil)[0]
-			if !cached.IsNil() {
-				next[index] = cached.Interface()
+			if targets := loadedTargets(foreignKey, []any{object}); len(targets) == 1 {
+				next[index] = targets[0]
 			}
 		}
 		current = next
@@ -134,6 +173,9 @@ func columnCells(ctx context.Context, site *Site, r *Request, info *models.Model
 	}
 	cells := make([]cell, len(objects))
 	if column.field == nil {
+		if err := loadLabels(ctx, info, objects); err != nil {
+			return nil, err
+		}
 		for index, object := range objects {
 			label := info.DisplayString(object)
 			cells[index] = cell{Kind: "label", Text: truncate(label, 80), Full: label}
@@ -150,11 +192,35 @@ func columnCells(ctx context.Context, site *Site, r *Request, info *models.Model
 		if err := query.PreloadRelated(ctx, present, column.field); err != nil {
 			return nil, err
 		}
+		if err := loadLabels(ctx, column.field.Related(), loadedTargets(column.field, present)); err != nil {
+			return nil, err
+		}
 	}
 	for index, owner := range owners {
 		cells[index] = displayValue(site, r, column.field, owner)
 	}
 	return cells, nil
+}
+
+// formatNumber rounds to places, drops trailing zeros and groups thousands: 12345.50 -> "12,345.5".
+func formatNumber(value decimal.Decimal, places int) string {
+	text := value.Round(int32(places)).String()
+	sign := ""
+	if strings.HasPrefix(text, "-") {
+		sign, text = "-", text[1:]
+	}
+	whole, fraction, _ := strings.Cut(text, ".")
+	var grouped strings.Builder
+	for index, digit := range whole {
+		if index > 0 && (len(whole)-index)%3 == 0 {
+			grouped.WriteByte(',')
+		}
+		grouped.WriteRune(digit)
+	}
+	if fraction != "" {
+		return sign + grouped.String() + "." + fraction
+	}
+	return sign + grouped.String()
 }
 
 func humanList(values []string) string {

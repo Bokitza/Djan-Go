@@ -243,7 +243,7 @@ func collectCandidates(typ reflect.Type, baseOffset uintptr, baseIndex []int, pr
 		if _, taken := into[key]; !taken {
 			into[key] = candidate{index: fieldIndex, name: name}
 		}
-		if structField.Type.Kind() == reflect.Struct && structField.Type != timeType && !structField.Type.Implements(foreignKeyInterface) {
+		if structField.Type.Kind() == reflect.Struct && structField.Type != timeType && structField.Type != decimalType && !structField.Type.Implements(foreignKeyInterface) {
 			collectCandidates(structField.Type, offset, fieldIndex, name, into)
 		}
 	}

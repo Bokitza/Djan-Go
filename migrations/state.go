@@ -15,6 +15,8 @@ import (
 	"strings"
 	"time"
 
+	"github.com/shopspring/decimal"
+
 	"github.com/yoav/djan-go/models"
 )
 
@@ -181,6 +183,8 @@ func defaultLiteral(value any) string {
 		return strconv.FormatInt(typed, 10)
 	case float64:
 		return strconv.FormatFloat(typed, 'g', -1, 64)
+	case decimal.Decimal:
+		return typed.String()
 	case time.Time, []byte:
 		return ""
 	}
@@ -199,14 +203,14 @@ func zeroLiteral(column *Column) string {
 	switch {
 	case strings.HasPrefix(column.Type, "varchar"), column.Type == "text":
 		return "''"
-	case column.Type == "bigint", column.Type == "integer", column.Type == "double precision":
+	case column.Type == "bigint", column.Type == "integer", column.Type == "double precision", strings.HasPrefix(column.Type, "numeric"):
 		if column.ForeignKey != nil {
 			return ""
 		}
 		return "0"
 	case column.Type == "boolean":
 		return "false"
-	case column.Type == "timestamptz":
+	case column.Type == "timestamptz", column.Type == "date":
 		return "now()"
 	case column.Type == "bytea":
 		return "''::bytea"

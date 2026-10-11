@@ -43,6 +43,8 @@ type paletteItem struct {
 
 type pageData struct {
 	SiteTitle   string
+	Language    string
+	Direction   string
 	Prefix      string
 	User        *auth.User
 	Nav         []navGroup
@@ -82,6 +84,8 @@ func (s *Site) loadTemplates() (map[string]*template.Template, error) {
 			}
 			return values
 		},
+		"t":  s.translate,
+		"tf": s.translatef,
 	}
 	templates := map[string]*template.Template{}
 	for _, page := range pages {
@@ -97,27 +101,27 @@ func (s *Site) loadTemplates() (map[string]*template.Template, error) {
 
 func (s *Site) navigation(r *Request, active string) ([]navGroup, []paletteItem) {
 	var groups []navGroup
-	palette := []paletteItem{{Label: "Dashboard", Hint: "Go to", URL: s.Prefix + "/", Icon: "home"}}
+	palette := []paletteItem{{Label: s.translate("Dashboard"), Hint: s.translate("Go to"), URL: s.Prefix + "/", Icon: "home"}}
 	for _, entry := range s.sortedEntries() {
 		info := entry.info()
 		permissions := s.permissionsFor(r, entry)
 		if !permissions.View {
 			continue
 		}
-		if len(groups) == 0 || groups[len(groups)-1].Label != titleCase(info.App) {
-			groups = append(groups, navGroup{Label: titleCase(info.App)})
+		if len(groups) == 0 || groups[len(groups)-1].Label != s.appLabel(info.App) {
+			groups = append(groups, navGroup{Label: s.appLabel(info.App)})
 		}
-		item := navModel{Label: info.VerboseNamePlural, URL: s.modelURL(info), Icon: entry.icon(), Active: active == info.Label()}
+		item := navModel{Label: s.modelNamePlural(info), URL: s.modelURL(info), Icon: entry.icon(), Active: active == info.Label()}
 		if permissions.Add {
 			item.AddURL = s.modelURL(info) + "add/"
-			palette = append(palette, paletteItem{Label: "Add " + strings.ToLower(info.VerboseName), Hint: titleCase(info.App), URL: item.AddURL, Icon: "plus"})
+			palette = append(palette, paletteItem{Label: s.addTitle(info), Hint: s.appLabel(info.App), URL: item.AddURL, Icon: "plus"})
 		}
-		palette = append(palette, paletteItem{Label: info.VerboseNamePlural, Hint: titleCase(info.App), URL: item.URL, Icon: entry.icon()})
+		palette = append(palette, paletteItem{Label: s.modelNamePlural(info), Hint: s.appLabel(info.App), URL: item.URL, Icon: entry.icon()})
 		groups[len(groups)-1].Models = append(groups[len(groups)-1].Models, item)
 	}
 	palette = append(palette,
-		paletteItem{Label: "Toggle dark mode", Hint: "Appearance", Action: "theme", Icon: "moon"},
-		paletteItem{Label: "Log out", Hint: "Account", Action: "logout", Icon: "log-out"})
+		paletteItem{Label: s.translate("Toggle dark mode"), Hint: s.translate("Appearance"), Action: "theme", Icon: "moon"},
+		paletteItem{Label: s.translate("Log out"), Hint: s.translate("Account"), Action: "logout", Icon: "log-out"})
 	for index := range palette {
 		palette[index].SVG = string(icon(palette[index].Icon))
 	}
@@ -133,7 +137,7 @@ func titleCase(value string) string {
 }
 
 func (s *Site) newPage(w http.ResponseWriter, r *Request, title, active string, breadcrumbs []crumb, page any) pageData {
-	data := pageData{SiteTitle: s.Title, Prefix: s.Prefix, Title: title, Breadcrumbs: breadcrumbs, Page: page, Flashes: s.takeFlashes(w, r.Request)}
+	data := pageData{SiteTitle: s.Title, Language: s.languageCode(), Direction: s.direction(), Prefix: s.Prefix, Title: title, Breadcrumbs: breadcrumbs, Page: page, Flashes: s.takeFlashes(w, r.Request)}
 	if r.User != nil {
 		data.User = r.User
 		data.Nav, data.Palette = s.navigation(r, active)
@@ -155,13 +159,14 @@ func (s *Site) render(w http.ResponseWriter, page, name string, status int, data
 }
 
 func (s *Site) renderError(w http.ResponseWriter, r *Request, status int, message string) {
-	data := s.newPage(w, r, http.StatusText(status), "", []crumb{{Label: http.StatusText(status)}}, map[string]any{"Status": status, "Message": message})
+	statusText := s.translate(http.StatusText(status))
+	data := s.newPage(w, r, statusText, "", []crumb{{Label: statusText}}, map[string]any{"Status": status, "Message": message})
 	s.render(w, "error.html", "base", status, data)
 }
 
 func (s *Site) serverError(w http.ResponseWriter, r *Request, err error) {
 	log.Printf("admin: %s %s: %v", r.Method, r.URL.Path, err)
-	s.renderError(w, r, http.StatusInternalServerError, "Something went wrong. The error was logged.")
+	s.renderError(w, r, http.StatusInternalServerError, s.translate("Something went wrong. The error was logged."))
 }
 
 func (s *Site) addFlash(w http.ResponseWriter, r *http.Request, level, message string) {

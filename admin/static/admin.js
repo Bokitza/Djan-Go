@@ -13,10 +13,10 @@ document.addEventListener('alpine:init', () => {
     title: '',
     message: '',
     action: '',
-    button: 'Delete',
+    button: document.documentElement.dataset.deleteLabel || 'Delete',
     ids: [],
     ask(options) {
-      Object.assign(this, { ids: [], button: 'Delete' }, options, { open: true })
+      Object.assign(this, { ids: [], button: document.documentElement.dataset.deleteLabel || 'Delete' }, options, { open: true })
     },
   })
 

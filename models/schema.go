@@ -6,6 +6,8 @@ import (
 	"runtime"
 	"time"
 	"unsafe"
+
+	"github.com/shopspring/decimal"
 )
 
 // Schema collects the column declarations of one model. It is passed to the model's Schema method.
@@ -176,6 +178,26 @@ func (c *Column[V]) Choices(values ...V) *Column[V] {
 	return c
 }
 
+// Choice is a choice value with its display label; create it with Option.
+type Choice[V any] struct {
+	Value V
+	Label string
+}
+
+// Option pairs a choice value with its display label: models.Option("Open", "פתוח").
+func Option[V any](value V, label string) Choice[V] { return Choice[V]{Value: value, Label: label} }
+
+// LabeledChoices restricts the allowed values like Choices and shows each with its label.
+func (c *Column[V]) LabeledChoices(choices ...Choice[V]) *Column[V] {
+	c.field.Choices = c.field.Choices[:0]
+	c.field.ChoiceLabels = map[string]string{}
+	for _, choice := range choices {
+		c.field.Choices = append(c.field.Choices, choice.Value)
+		c.field.ChoiceLabels[fmt.Sprint(choice.Value)] = choice.Label
+	}
+	return c
+}
+
 // Unique adds a unique constraint.
 func (c *Column[V]) Unique() *Column[V] { c.field.Unique = true; return c }
 
@@ -284,6 +306,35 @@ func (s *Schema) NullableDateTime(field **time.Time) *Column[time.Time] {
 	return newColumn[time.Time](s, callerLocation(1), unsafe.Pointer(field), reflect.TypeFor[*time.Time](), KindDateTime)
 }
 
+// Date declares a date column (the time of day is ignored).
+func (s *Schema) Date(field *time.Time) *Column[time.Time] {
+	return newColumn[time.Time](s, callerLocation(1), unsafe.Pointer(field), timeType, KindDate)
+}
+
+// NullableDate declares a nullable date column.
+func (s *Schema) NullableDate(field **time.Time) *Column[time.Time] {
+	return newColumn[time.Time](s, callerLocation(1), unsafe.Pointer(field), reflect.TypeFor[*time.Time](), KindDate)
+}
+
+// Decimal declares a numeric(maxDigits, places) column, e.g. money as Decimal(&t.Amount, 12, 2).
+func (s *Schema) Decimal(field *decimal.Decimal, maxDigits, places int) *Column[decimal.Decimal] {
+	return newDecimal(s, callerLocation(1), unsafe.Pointer(field), decimalType, maxDigits, places)
+}
+
+// NullableDecimal declares a nullable numeric column.
+func (s *Schema) NullableDecimal(field **decimal.Decimal, maxDigits, places int) *Column[decimal.Decimal] {
+	return newDecimal(s, callerLocation(1), unsafe.Pointer(field), reflect.TypeFor[*decimal.Decimal](), maxDigits, places)
+}
+
+func newDecimal(s *Schema, location string, pointer unsafe.Pointer, typ reflect.Type, maxDigits, places int) *Column[decimal.Decimal] {
+	column := newColumn[decimal.Decimal](s, location, pointer, typ, KindDecimal)
+	if maxDigits <= 0 || places < 0 || places > maxDigits {
+		s.errorf(location, "decimal field %s: need 0 <= places <= maxDigits and maxDigits > 0", column.field.Name)
+	}
+	column.field.MaxDigits, column.field.Places = maxDigits, places
+	return column
+}
+
 // Bytes declares a bytea column.
 func (s *Schema) Bytes(field *[]byte) *Column[[]byte] {
 	return newColumn[[]byte](s, callerLocation(1), unsafe.Pointer(field), reflect.TypeFor[[]byte](), KindBytes)
@@ -347,6 +398,9 @@ func (c *ForeignKeyColumn) Help(text string) *ForeignKeyColumn { c.field.HelpTex
 
 // DBColumn overrides the column name.
 func (c *ForeignKeyColumn) DBColumn(name string) *ForeignKeyColumn { c.field.Column = name; return c }
+
+// InLabel loads the related object before the model's String method is called to render a label.
+func (c *ForeignKeyColumn) InLabel() *ForeignKeyColumn { c.field.InLabel = true; return c }
 
 // Field returns the declared field.
 func (c *ForeignKeyColumn) Field() *Field { return c.field }

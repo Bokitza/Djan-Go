@@ -5,6 +5,8 @@ import (
 	"reflect"
 	"time"
 	"unsafe"
+
+	"github.com/shopspring/decimal"
 )
 
 // Kind is the logical type of a field.
@@ -24,12 +26,15 @@ const (
 	KindUUID
 	KindJSON
 	KindForeignKey
+	KindDecimal
+	KindDate
 )
 
 var kindNames = map[Kind]string{
 	KindAutoID: "auto id", KindChar: "char", KindText: "text", KindInt: "int", KindInt32: "int32",
 	KindInt64: "int64", KindFloat: "float", KindBool: "bool", KindDateTime: "datetime",
 	KindBytes: "bytes", KindUUID: "uuid", KindJSON: "json", KindForeignKey: "foreign key",
+	KindDecimal: "decimal", KindDate: "date",
 }
 
 func (k Kind) String() string { return kindNames[k] }
@@ -39,8 +44,11 @@ func (k Kind) IsText() bool { return k == KindChar || k == KindText }
 
 // IsNumeric reports whether the kind is a number.
 func (k Kind) IsNumeric() bool {
-	return k == KindInt || k == KindInt32 || k == KindInt64 || k == KindFloat || k == KindAutoID
+	return k == KindInt || k == KindInt32 || k == KindInt64 || k == KindFloat || k == KindAutoID || k == KindDecimal
 }
+
+// IsTemporal reports whether the kind is a date or a timestamp.
+func (k Kind) IsTemporal() bool { return k == KindDateTime || k == KindDate }
 
 // OnDelete is the referential action of a foreign key.
 type OnDelete string
@@ -54,29 +62,35 @@ const (
 
 // Field describes one column of a model.
 type Field struct {
-	Model       *ModelInfo
-	Name        string // Go field path, e.g. "Title" or "Author"
-	Column      string
-	Kind        Kind
-	GoType      reflect.Type // type of the struct field
-	Index       []int
-	Offset      uintptr
-	Nullable    bool
-	PrimaryKey  bool
-	Auto        bool // managed by the database: id, created_at, updated_at
-	MaxLength   int
-	Unique      bool
-	Indexed     bool
-	Blank       bool
-	Editable    bool
-	HasDefault  bool
-	Default     any // a value of the field's base (non-pointer) type
-	Choices     []any
-	VerboseName string
-	HelpText    string
-	RelatedType reflect.Type // FK target
-	OnDelete    OnDelete
-	DeclaredAt  string
+	Model      *ModelInfo
+	Name       string // Go field path, e.g. "Title" or "Author"
+	Column     string
+	Kind       Kind
+	GoType     reflect.Type // type of the struct field
+	Index      []int
+	Offset     uintptr
+	Nullable   bool
+	PrimaryKey bool
+	Auto       bool // managed by the database: id, created_at, updated_at
+	MaxLength  int
+	MaxDigits  int // decimal precision
+	Places     int // decimal scale
+	Unique     bool
+	Indexed    bool
+	Blank      bool
+	Editable   bool
+	HasDefault bool
+	Default    any // a value of the field's base (non-pointer) type
+	Choices    []any
+	// ChoiceLabels maps fmt.Sprint(choice) to its display label (see Column.LabeledChoices).
+	ChoiceLabels map[string]string
+	VerboseName  string
+	HelpText     string
+	RelatedType  reflect.Type // FK target
+	OnDelete     OnDelete
+	// InLabel marks a foreign key that the model's String method reads, so it is loaded before labels render.
+	InLabel    bool
+	DeclaredAt string
 }
 
 func (f *Field) String() string { return f.Model.Name + "." + f.Name }
@@ -275,6 +289,10 @@ func (f *Field) DatabaseType() string {
 		return "boolean"
 	case KindDateTime:
 		return "timestamptz"
+	case KindDate:
+		return "date"
+	case KindDecimal:
+		return fmt.Sprintf("numeric(%d,%d)", f.MaxDigits, f.Places)
 	case KindBytes:
 		return "bytea"
 	case KindUUID:
@@ -285,9 +303,15 @@ func (f *Field) DatabaseType() string {
 	return "text"
 }
 
-// ChoiceLabel returns a human label for a choice value.
-func ChoiceLabel(value any) string {
+// ChoiceLabel returns the display label of a choice value of the field.
+func (f *Field) ChoiceLabel(value any) string {
+	if label, ok := f.ChoiceLabels[fmt.Sprint(value)]; ok {
+		return label
+	}
 	return Humanize(fmt.Sprint(value))
 }
 
-var timeType = reflect.TypeFor[time.Time]()
+var (
+	timeType    = reflect.TypeFor[time.Time]()
+	decimalType = reflect.TypeFor[decimal.Decimal]()
+)

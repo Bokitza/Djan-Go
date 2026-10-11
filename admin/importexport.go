@@ -193,7 +193,7 @@ func (e *entry[T]) importDataset(r *Request, index int, dataset *importexport.Da
 	if result != nil {
 		for index := range result.Rows {
 			if row := &result.Rows[index]; row.Error != nil {
-				if message, ok := friendlyError(row.Error); ok {
+				if message, ok := r.Site.friendlyError(row.Error); ok {
 					row.Error = errors.New(message)
 				}
 			}
@@ -202,7 +202,7 @@ func (e *entry[T]) importDataset(r *Request, index int, dataset *importexport.Da
 	return result, err
 }
 
-func (e *entry[T]) checkImportAllowed(r *Request, permissions permissions, object *T, isNew bool) error {
+func (e *entry[T]) checkImportAllowed(r *Request, permissions Permissions, object *T, isNew bool) error {
 	info := e.model
 	var original any
 	if isNew {

@@ -28,7 +28,14 @@ var staticFiles embed.FS
 type Site struct {
 	Title  string
 	Prefix string
+	// Language selects the UI translation ("he" also switches the layout to right-to-left).
+	Language string
+	// DateFormat and DateTimeFormat are Go time layouts for displayed values.
+	DateFormat     string
+	DateTimeFormat string
 
+	messages  map[string]string
+	appLabels map[string]string
 	entries   []modelEntry
 	byKey     map[string]modelEntry
 	templates map[string]*template.Template
@@ -50,6 +57,7 @@ type modelEntry interface {
 	changeQuerySet(r *Request) query.Dynamic
 	deleteQuerySet(r *Request) query.Dynamic
 	canAddRule(r *Request) bool
+	permissionRule(r *Request, granted Permissions) Permissions
 	beforeSave(r *Request, object any, isNew bool) error
 	afterSave(r *Request, object any, isNew bool) error
 	extraFields() []extraField
@@ -68,7 +76,13 @@ func (e *entry[T]) info() *models.ModelInfo    { return e.model }
 func (e *entry[T]) config() *resolvedConfig    { return e.resolved }
 func (e *entry[T]) extraFields() []extraField  { return e.admin.extras }
 func (e *entry[T]) canAddRule(r *Request) bool { return e.admin.CanAdd == nil || e.admin.CanAdd(r) }
-func (e *entry[T]) base() query.QuerySet[T]    { return query.Objects[T]() }
+func (e *entry[T]) permissionRule(r *Request, granted Permissions) Permissions {
+	if e.admin.Permissions == nil {
+		return granted
+	}
+	return e.admin.Permissions(r, granted)
+}
+func (e *entry[T]) base() query.QuerySet[T] { return query.Objects[T]() }
 func (e *entry[T]) apply(rule RuleFunc[T], r *Request, qs query.QuerySet[T]) query.QuerySet[T] {
 	if rule == nil {
 		return qs
@@ -146,6 +160,12 @@ func Register[T any](site *Site, modelAdmin ModelAdmin[T]) {
 	if _, exists := site.byKey[key]; exists {
 		panic(fmt.Sprintf("admin: %s: %s is already registered", location, info.Label()))
 	}
+	for _, field := range modelAdmin.ManyToMany {
+		if info.FieldByName(field.editor.name()) != nil {
+			panic(fmt.Sprintf("admin: %s: many-to-many %q clashes with a field of %s", location, field.editor.name(), info.Label()))
+		}
+		modelAdmin.extras = append(modelAdmin.extras, field.editor)
+	}
 	registered := &entry[T]{model: info, admin: modelAdmin, resolved: resolved}
 	site.entries = append(site.entries, registered)
 	site.byKey[key] = registered
@@ -196,21 +216,24 @@ func (s *Site) sortedEntries() []modelEntry {
 	return sorted
 }
 
-// permissions for a request and model.
-type permissions struct {
+// Permissions are what a request may do with a model in the admin.
+type Permissions struct {
 	View, Add, Change, Delete bool
 }
 
-func (s *Site) permissionsFor(r *Request, entry modelEntry) permissions {
+func (s *Site) permissionsFor(r *Request, entry modelEntry) Permissions {
 	ctx := r.Context()
 	info := entry.info()
 	change := r.User.HasModelPerm(ctx, info, "change")
-	return permissions{
+	granted := Permissions{
 		View:   change || r.User.HasModelPerm(ctx, info, "view"),
-		Add:    r.User.HasModelPerm(ctx, info, "add") && entry.canAddRule(r),
+		Add:    r.User.HasModelPerm(ctx, info, "add"),
 		Change: change,
 		Delete: r.User.HasModelPerm(ctx, info, "delete"),
 	}
+	allowed := entry.permissionRule(r, granted)
+	allowed.Add = allowed.Add && entry.canAddRule(r)
+	return allowed
 }
 
 func (s *Site) modelURL(info *models.ModelInfo) string {
@@ -280,11 +303,11 @@ func (s *Site) withModel(handler func(w http.ResponseWriter, r *Request, entry m
 	return func(w http.ResponseWriter, r *Request) {
 		entry, ok := s.byKey[r.PathValue("app")+"/"+r.PathValue("model")]
 		if !ok {
-			s.renderError(w, r, http.StatusNotFound, "This model is not registered in the admin.")
+			s.renderError(w, r, http.StatusNotFound, s.translate("This model is not registered in the admin."))
 			return
 		}
 		if !s.permissionsFor(r, entry).View {
-			s.renderError(w, r, http.StatusForbidden, "You don't have permission to view "+entry.info().VerboseNamePlural+".")
+			s.renderError(w, r, http.StatusForbidden, s.translatef("You don't have permission to view %s.", s.modelNamePlural(entry.info())))
 			return
 		}
 		handler(w, r, entry)

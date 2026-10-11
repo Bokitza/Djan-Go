@@ -20,13 +20,13 @@ import (
 
 type modelMeta struct {
 	Label, Plural, App, URL, AddURL, Icon string
-	Permissions                           permissions
+	Permissions                           Permissions
 }
 
 func (s *Site) meta(r *Request, entry modelEntry) modelMeta {
 	info := entry.info()
 	permissions := s.permissionsFor(r, entry)
-	meta := modelMeta{Label: info.VerboseName, Plural: info.VerboseNamePlural, App: titleCase(info.App), URL: s.modelURL(info), Icon: entry.icon(), Permissions: permissions}
+	meta := modelMeta{Label: s.modelName(info), Plural: s.modelNamePlural(info), App: s.appLabel(info.App), URL: s.modelURL(info), Icon: entry.icon(), Permissions: permissions}
 	if permissions.Add {
 		meta.AddURL = s.modelURL(info) + "add/"
 	}
@@ -35,7 +35,7 @@ func (s *Site) meta(r *Request, entry modelEntry) modelMeta {
 
 func (s *Site) modelCrumbs(entry modelEntry, extra ...crumb) []crumb {
 	info := entry.info()
-	crumbs := []crumb{{Label: titleCase(info.App)}, {Label: info.VerboseNamePlural, URL: s.modelURL(info)}}
+	crumbs := []crumb{{Label: s.appLabel(info.App)}, {Label: s.modelNamePlural(info), URL: s.modelURL(info)}}
 	return append(crumbs, extra...)
 }
 
@@ -68,7 +68,7 @@ func (s *Site) dashboard(w http.ResponseWriter, r *Request) {
 		}
 		groups[len(groups)-1].Cards = append(groups[len(groups)-1].Cards, dashboardCard{Meta: meta, Count: count})
 	}
-	data := s.newPage(w, r, "Dashboard", "", nil, map[string]any{"Groups": groups})
+	data := s.newPage(w, r, s.translate("Dashboard"), "", nil, map[string]any{"Groups": groups})
 	s.render(w, "dashboard.html", "base", http.StatusOK, data)
 }
 
@@ -172,19 +172,22 @@ func (s *Site) filterOptions(r *Request, entry modelEntry, field *models.Field) 
 	ctx := r.Context()
 	switch {
 	case field.Kind == models.KindBool:
-		options := []choiceOption{{Value: "1", Label: "Yes"}, {Value: "0", Label: "No"}}
+		options := []choiceOption{{Value: "1", Label: s.translate("Yes")}, {Value: "0", Label: s.translate("No")}}
 		if field.Nullable {
-			options = append(options, choiceOption{Value: "null", Label: "Unknown"})
+			options = append(options, choiceOption{Value: "null", Label: s.translate("Unknown")})
 		}
 		return options
 	case len(field.Choices) > 0:
 		var options []choiceOption
 		for _, choice := range field.Choices {
-			options = append(options, choiceOption{Value: fmt.Sprint(choice), Label: models.ChoiceLabel(choice)})
+			options = append(options, choiceOption{Value: fmt.Sprint(choice), Label: field.ChoiceLabel(choice)})
 		}
 		return options
-	case field.Kind == models.KindDateTime:
-		return []choiceOption{{Value: "today", Label: "Today"}, {Value: "7d", Label: "Past 7 days"}, {Value: "month", Label: "This month"}, {Value: "year", Label: "This year"}}
+	case field.Kind.IsTemporal():
+		return []choiceOption{
+			{Value: "today", Label: s.translate("Today")}, {Value: "7d", Label: s.translate("Past 7 days")},
+			{Value: "month", Label: s.translate("This month")}, {Value: "year", Label: s.translate("This year")},
+		}
 	case field.Kind == models.KindForeignKey:
 		related := field.Related()
 		relatedEntry := s.entryFor(related)
@@ -198,7 +201,7 @@ func (s *Site) filterOptions(r *Request, entry modelEntry, field *models.Field) 
 			return nil
 		}
 		objects, err := queryset.Limit(50).All(ctx)
-		if err != nil {
+		if err != nil || loadLabels(ctx, related, objects) != nil {
 			return nil
 		}
 		var options []choiceOption
@@ -206,7 +209,7 @@ func (s *Site) filterOptions(r *Request, entry modelEntry, field *models.Field) 
 			options = append(options, choiceOption{Value: strconv.FormatInt(related.PKOf(object), 10), Label: related.DisplayString(object)})
 		}
 		if field.Nullable {
-			options = append(options, choiceOption{Value: "null", Label: "None"})
+			options = append(options, choiceOption{Value: "null", Label: s.translate("None")})
 		}
 		return options
 	}
@@ -221,7 +224,7 @@ func (s *Site) filterOptions(r *Request, entry modelEntry, field *models.Field) 
 		if value == nil {
 			if !seen["null"] {
 				seen["null"] = true
-				options = append(options, choiceOption{Value: "null", Label: "None"})
+				options = append(options, choiceOption{Value: "null", Label: s.translate("None")})
 			}
 			continue
 		}
@@ -241,7 +244,7 @@ func filterCond(field *models.Field, raw string) (query.Cond, bool) {
 	switch field.Kind {
 	case models.KindBool:
 		return query.FieldLookup(field, "exact", raw == "1"), raw == "1" || raw == "0"
-	case models.KindDateTime:
+	case models.KindDateTime, models.KindDate:
 		now := time.Now()
 		var start time.Time
 		switch raw {
@@ -323,13 +326,14 @@ func (s *Site) listView(w http.ResponseWriter, r *Request, entry modelEntry) {
 		parameter := filterPrefix + field.LookupName()
 		dropOnClear = append(dropOnClear, parameter)
 		current := values.Get(parameter)
-		group := filterGroup{Label: field.VerboseName, Options: []filterOption{{Label: "All", URL: withQuery(values, parameter, "", "p"), Active: current == ""}}}
+		fieldLabel := s.translate(field.VerboseName)
+		group := filterGroup{Label: fieldLabel, Options: []filterOption{{Label: s.translate("All"), URL: withQuery(values, parameter, "", "p"), Active: current == ""}}}
 		for _, option := range s.filterOptions(r, entry, field) {
 			active := option.Value == current
 			group.Options = append(group.Options, filterOption{Label: option.Label, URL: withQuery(values, parameter, option.Value, "p"), Active: active})
 			if active {
 				group.Active = true
-				page.ActiveFilters = append(page.ActiveFilters, activeFilter{Label: field.VerboseName + ": " + option.Label, RemoveURL: withQuery(values, parameter, "", "p")})
+				page.ActiveFilters = append(page.ActiveFilters, activeFilter{Label: fieldLabel + ": " + option.Label, RemoveURL: withQuery(values, parameter, "", "p")})
 			}
 		}
 		page.Filters = append(page.Filters, group)
@@ -340,7 +344,7 @@ func (s *Site) listView(w http.ResponseWriter, r *Request, entry modelEntry) {
 	sortKey := strings.TrimPrefix(order, "-")
 	validSort := validSortKey(config, sortKey)
 	for _, column := range config.columns {
-		header := listHeader{Label: column.label}
+		header := listHeader{Label: s.translate(column.label)}
 		if key := column.sortKey(); key != "" {
 			header.Sortable = true
 			header.Sorted = sortKey == key && validSort
@@ -393,7 +397,7 @@ func (s *Site) listView(w http.ResponseWriter, r *Request, entry modelEntry) {
 	}
 	page.Rows = rows
 
-	data := s.newPage(w, r, info.VerboseNamePlural, info.Label(), s.modelCrumbs(entry), page)
+	data := s.newPage(w, r, s.modelNamePlural(info), info.Label(), s.modelCrumbs(entry), page)
 	if r.Header.Get("HX-Request") == "true" && r.Header.Get("HX-Target") == "results" {
 		s.render(w, "list.html", "results", http.StatusOK, data)
 		return
@@ -421,7 +425,7 @@ func allowedSet(ctx context.Context, queryset query.Dynamic, ids []int64) (map[i
 	return allowed, err
 }
 
-func (s *Site) buildRows(r *Request, entry modelEntry, objects []any, permissions permissions) ([]listRow, error) {
+func (s *Site) buildRows(r *Request, entry modelEntry, objects []any, permissions Permissions) ([]listRow, error) {
 	ctx := r.Context()
 	info := entry.info()
 	ids := make([]int64, len(objects))
@@ -478,7 +482,7 @@ type formPage struct {
 func (s *Site) addView(w http.ResponseWriter, r *Request, entry modelEntry) {
 	info := entry.info()
 	if !s.permissionsFor(r, entry).Add {
-		s.renderError(w, r, http.StatusForbidden, "You don't have permission to add "+info.VerboseNamePlural+".")
+		s.renderError(w, r, http.StatusForbidden, s.translatef("You don't have permission to add %s.", s.modelNamePlural(info)))
 		return
 	}
 	object := info.New()
@@ -490,12 +494,12 @@ func (s *Site) changeView(w http.ResponseWriter, r *Request, entry modelEntry) {
 	info := entry.info()
 	id, err := strconv.ParseInt(r.PathValue("id"), 10, 64)
 	if err != nil {
-		s.renderError(w, r, http.StatusNotFound, "Not found.")
+		s.renderError(w, r, http.StatusNotFound, s.translate("Not found."))
 		return
 	}
 	object, err := entry.viewQuerySet(r).GetByPK(r.Context(), id)
 	if errors.Is(err, query.ErrNotFound) {
-		s.renderError(w, r, http.StatusNotFound, fmt.Sprintf("%s with ID %d doesn't exist or you can't see it.", info.VerboseName, id))
+		s.renderError(w, r, http.StatusNotFound, s.translatef("%s with ID %d doesn't exist or you can't see it.", s.modelName(info), id))
 		return
 	}
 	if err != nil {
@@ -512,7 +516,7 @@ func (s *Site) changeView(w http.ResponseWriter, r *Request, entry modelEntry) {
 		editable = allowed[id]
 	}
 	if r.Method == http.MethodPost && !editable {
-		s.renderError(w, r, http.StatusForbidden, "You don't have permission to change this "+strings.ToLower(info.VerboseName)+".")
+		s.renderError(w, r, http.StatusForbidden, s.translatef("You don't have permission to change this %s.", strings.ToLower(s.modelName(info))))
 		return
 	}
 	s.handleForm(w, r, entry, object, false, editable)
@@ -524,23 +528,24 @@ func (s *Site) handleForm(w http.ResponseWriter, r *Request, entry modelEntry, o
 	fieldErrors := map[string]string{}
 	var formErrors []string
 	extraErrors := map[string]string{}
+	locked := entry.config().lockedFields(r, object)
 
 	if r.Method == http.MethodPost {
 		if err := r.ParseForm(); err != nil {
-			s.renderError(w, r, http.StatusBadRequest, "Invalid form.")
+			s.renderError(w, r, http.StatusBadRequest, s.translate("Invalid form."))
 			return
 		}
 		submitted = r.PostForm
-		fieldErrors = s.bindForm(r, entry, object, submitted)
+		fieldErrors = s.bindForm(r, entry, object, locked, submitted)
 		for _, extra := range entry.extraFields() {
 			if message := extra.validate(r, isNew, submitted); message != "" {
-				extraErrors[extra.name()] = message
+				extraErrors[extra.name()] = s.translate(message)
 			}
 		}
 		if len(fieldErrors) == 0 && len(extraErrors) == 0 {
 			if validator, ok := object.(query.Validator); ok {
 				if err := validator.Validate(); err != nil {
-					formErrors = append(formErrors, err.Error())
+					formErrors = append(formErrors, s.errorText(err))
 				}
 			}
 		}
@@ -564,12 +569,13 @@ func (s *Site) handleForm(w http.ResponseWriter, r *Request, entry modelEntry, o
 				return nil
 			})
 			if err == nil {
+				_ = loadLabels(r.Context(), info, []any{object})
 				label := info.DisplayString(object)
-				verb := "changed"
+				format := "The %s “%s” was changed successfully."
 				if isNew {
-					verb = "added"
+					format = "The %s “%s” was added successfully."
 				}
-				s.addFlash(w, r.Request, "success", fmt.Sprintf("The %s “%s” was %s successfully.", strings.ToLower(info.VerboseName), label, verb))
+				s.addFlash(w, r.Request, "success", s.translatef(format, strings.ToLower(s.modelName(info)), label))
 				id := info.PKOf(object)
 				switch submitted.Get("_action") {
 				case "continue":
@@ -581,7 +587,7 @@ func (s *Site) handleForm(w http.ResponseWriter, r *Request, entry modelEntry, o
 				}
 				return
 			}
-			message, ok := friendlyError(err)
+			message, ok := s.friendlyError(err)
 			if !ok {
 				s.serverError(w, r, err)
 				return
@@ -591,18 +597,20 @@ func (s *Site) handleForm(w http.ResponseWriter, r *Request, entry modelEntry, o
 	}
 
 	id := info.PKOf(object)
+	_ = loadLabels(r.Context(), info, []any{object})
 	page := formPage{Meta: s.meta(r, entry), IsNew: isNew, Editable: editable, ObjectLabel: info.DisplayString(object), ID: id, Errors: formErrors}
-	page.Fields = s.buildFormFields(r, entry, object, editable, submitted, fieldErrors)
+	page.Fields = s.buildFormFields(r, entry, object, editable, locked, submitted, fieldErrors)
 	for _, extra := range entry.extraFields() {
 		view, err := extra.render(r, object, isNew, editable, submitted)
 		if err != nil {
 			s.serverError(w, r, err)
 			return
 		}
+		view.Label, view.Help = s.translate(view.Label), s.translate(view.Help)
 		view.Error = extraErrors[extra.name()]
 		page.Extras = append(page.Extras, view)
 	}
-	title := "Add " + strings.ToLower(info.VerboseName)
+	title := s.addTitle(info)
 	crumbs := s.modelCrumbs(entry, crumb{Label: title})
 	if isNew {
 		page.Action = s.modelURL(info) + "add/"
@@ -624,7 +632,7 @@ func (s *Site) handleForm(w http.ResponseWriter, r *Request, entry modelEntry, o
 			page.DeleteURL = s.objectURL(info, id) + "delete/"
 		}
 		if !editable {
-			page.ReadOnlyNotes = "You can view this " + strings.ToLower(info.VerboseName) + " but not change it."
+			page.ReadOnlyNotes = s.translatef("You can view this %s but not change it.", strings.ToLower(s.modelName(info)))
 		}
 	}
 	status := http.StatusOK
@@ -638,18 +646,18 @@ type userError struct{ err error }
 
 func (e userError) Error() string { return e.err.Error() }
 
-func friendlyError(err error) (string, bool) {
+func (s *Site) friendlyError(err error) (string, bool) {
 	var hookError userError
 	if errors.As(err, &hookError) {
-		return hookError.Error(), true
+		return s.errorText(hookError.err), true
 	}
 	var databaseError *pgconn.PgError
 	if errors.As(err, &databaseError) {
 		switch databaseError.Code {
 		case "23505":
-			return "This would create a duplicate: " + strings.TrimSpace(databaseError.Detail), true
+			return s.translate("This would create a duplicate:") + " " + strings.TrimSpace(databaseError.Detail), true
 		case "23503":
-			return "This object is referenced by other objects or references a missing one: " + strings.TrimSpace(databaseError.Detail), true
+			return s.translate("This object is referenced by other objects or references a missing one:") + " " + strings.TrimSpace(databaseError.Detail), true
 		case "23502", "23514", "22001":
 			return databaseError.Message, true
 		}
@@ -663,48 +671,49 @@ func (s *Site) deleteView(w http.ResponseWriter, r *Request, entry modelEntry) {
 	info := entry.info()
 	id, err := strconv.ParseInt(r.PathValue("id"), 10, 64)
 	if err != nil {
-		s.renderError(w, r, http.StatusNotFound, "Not found.")
+		s.renderError(w, r, http.StatusNotFound, s.translate("Not found."))
 		return
 	}
 	if !s.permissionsFor(r, entry).Delete {
-		s.renderError(w, r, http.StatusForbidden, "You don't have permission to delete "+info.VerboseNamePlural+".")
+		s.renderError(w, r, http.StatusForbidden, s.translatef("You don't have permission to delete %s.", s.modelNamePlural(info)))
 		return
 	}
 	object, err := entry.deleteQuerySet(r).GetByPK(r.Context(), id)
 	if errors.Is(err, query.ErrNotFound) {
 		if _, viewErr := entry.viewQuerySet(r).GetByPK(r.Context(), id); viewErr == nil {
-			s.renderError(w, r, http.StatusForbidden, "You don't have permission to delete this "+strings.ToLower(info.VerboseName)+".")
+			s.renderError(w, r, http.StatusForbidden, s.translatef("You don't have permission to delete this %s.", strings.ToLower(s.modelName(info))))
 			return
 		}
-		s.renderError(w, r, http.StatusNotFound, "Not found.")
+		s.renderError(w, r, http.StatusNotFound, s.translate("Not found."))
 		return
 	}
 	if err != nil {
 		s.serverError(w, r, err)
 		return
 	}
+	_ = loadLabels(r.Context(), info, []any{object})
 	label := info.DisplayString(object)
 	if err := query.DeleteAny(r.Context(), info, object); err != nil {
-		if message, ok := friendlyError(err); ok {
-			s.addFlash(w, r.Request, "error", "Could not delete “"+label+"”. "+message)
+		if message, ok := s.friendlyError(err); ok {
+			s.addFlash(w, r.Request, "error", s.translatef("Could not delete “%s”.", label)+" "+message)
 			redirect(w, r.Request, s.objectURL(info, id))
 			return
 		}
 		s.serverError(w, r, err)
 		return
 	}
-	s.addFlash(w, r.Request, "success", fmt.Sprintf("The %s “%s” was deleted.", strings.ToLower(info.VerboseName), label))
+	s.addFlash(w, r.Request, "success", s.translatef("The %s “%s” was deleted.", strings.ToLower(s.modelName(info)), label))
 	redirect(w, r.Request, s.modelURL(info))
 }
 
 func (s *Site) bulkDelete(w http.ResponseWriter, r *Request, entry modelEntry) {
 	info := entry.info()
 	if !s.permissionsFor(r, entry).Delete {
-		s.renderError(w, r, http.StatusForbidden, "You don't have permission to delete "+info.VerboseNamePlural+".")
+		s.renderError(w, r, http.StatusForbidden, s.translatef("You don't have permission to delete %s.", s.modelNamePlural(info)))
 		return
 	}
 	if err := r.ParseForm(); err != nil {
-		s.renderError(w, r, http.StatusBadRequest, "Invalid form.")
+		s.renderError(w, r, http.StatusBadRequest, s.translate("Invalid form."))
 		return
 	}
 	var ids []int64
@@ -715,21 +724,21 @@ func (s *Site) bulkDelete(w http.ResponseWriter, r *Request, entry modelEntry) {
 	}
 	back := s.modelURL(info) + "?" + r.URL.RawQuery
 	if len(ids) == 0 {
-		s.addFlash(w, r.Request, "info", "No items were selected.")
+		s.addFlash(w, r.Request, "info", s.translate("No items were selected."))
 		redirect(w, r.Request, back)
 		return
 	}
 	deleted, err := entry.deleteQuerySet(r).Filter(query.FieldLookup(info.PK, "in", idValues(ids)...)).OrderByNames().Delete(r.Context())
 	if err != nil {
-		if message, ok := friendlyError(err); ok {
-			s.addFlash(w, r.Request, "error", "Nothing was deleted. "+message)
+		if message, ok := s.friendlyError(err); ok {
+			s.addFlash(w, r.Request, "error", s.translate("Nothing was deleted.")+" "+message)
 			redirect(w, r.Request, back)
 			return
 		}
 		s.serverError(w, r, err)
 		return
 	}
-	message := fmt.Sprintf("Deleted %d %s.", deleted, strings.ToLower(pluralFor(info, deleted)))
+	message := s.translatef("Deleted %d %s.", deleted, strings.ToLower(s.translate(pluralFor(info, deleted))))
 	level := "success"
 	if skipped := int64(len(ids)) - deleted; skipped > 0 {
 		message += fmt.Sprintf(" %d could not be deleted because you are not allowed to delete them.", skipped)
@@ -773,6 +782,9 @@ func (s *Site) autocomplete(w http.ResponseWriter, r *Request, entry modelEntry)
 		queryset = queryset.Filter(query.Or(conds...))
 	}
 	objects, err := queryset.Limit(20).All(r.Context())
+	if err == nil {
+		err = loadLabels(r.Context(), info, objects)
+	}
 	if err != nil {
 		s.serverError(w, r, err)
 		return
@@ -802,7 +814,7 @@ func (s *Site) loginPage(w http.ResponseWriter, r *http.Request) {
 }
 
 func (s *Site) renderLogin(w http.ResponseWriter, r *http.Request, status int, username, message string) {
-	data := s.newPage(w, &Request{Request: r, Site: s}, "Log in", "", nil, map[string]any{
+	data := s.newPage(w, &Request{Request: r, Site: s}, s.translate("Log in"), "", nil, map[string]any{
 		"Username": username, "Error": message, "Next": s.safeNext(r.FormValue("next")),
 	})
 	s.render(w, "login.html", "base", status, data)
@@ -810,7 +822,7 @@ func (s *Site) renderLogin(w http.ResponseWriter, r *http.Request, status int, u
 
 func (s *Site) loginSubmit(w http.ResponseWriter, r *http.Request) {
 	if err := r.ParseForm(); err != nil {
-		s.renderLogin(w, r, http.StatusBadRequest, "", "Invalid form.")
+		s.renderLogin(w, r, http.StatusBadRequest, "", s.translate("Invalid form."))
 		return
 	}
 	username := strings.TrimSpace(r.PostForm.Get("username"))
@@ -820,11 +832,11 @@ func (s *Site) loginSubmit(w http.ResponseWriter, r *http.Request) {
 			s.serverError(w, &Request{Request: r, Site: s}, err)
 			return
 		}
-		s.renderLogin(w, r, http.StatusUnauthorized, username, "Please enter the correct username and password for a staff account. Both fields may be case-sensitive.")
+		s.renderLogin(w, r, http.StatusUnauthorized, username, s.translate("Please enter the correct username and password for a staff account. Both fields may be case-sensitive."))
 		return
 	}
 	if !user.IsStaff {
-		s.renderLogin(w, r, http.StatusForbidden, username, "This account doesn't have access to the admin.")
+		s.renderLogin(w, r, http.StatusForbidden, username, s.translate("This account doesn't have access to the admin."))
 		return
 	}
 	if err := auth.Login(r.Context(), w, r, user); err != nil {
@@ -836,6 +848,6 @@ func (s *Site) loginSubmit(w http.ResponseWriter, r *http.Request) {
 
 func (s *Site) logout(w http.ResponseWriter, r *http.Request) {
 	auth.Logout(r.Context(), w, r)
-	s.addFlash(w, r, "info", "You have been logged out.")
+	s.addFlash(w, r, "info", s.translate("You have been logged out."))
 	http.Redirect(w, r, s.Prefix+"/login/", http.StatusSeeOther)
 }

@@ -79,6 +79,7 @@ func newSite() *admin.Site {
 
 type fixture struct {
 	ctx    context.Context
+	pool   *pgxpool.Pool
 	server *httptest.Server
 	alice  *auth.User
 	bob    *auth.User
@@ -93,7 +94,7 @@ func setup(t *testing.T) *fixture {
 	if err := auth.CreatePermissions(ctx); err != nil {
 		t.Fatal(err)
 	}
-	f := &fixture{ctx: ctx, tickets: map[string]*Ticket{}}
+	f := &fixture{ctx: ctx, pool: pool, tickets: map[string]*Ticket{}}
 	f.alice = createStaff(t, ctx, "alice")
 	f.bob = createStaff(t, ctx, "bob")
 	for _, permission := range []string{"helpdesk.view_ticket", "helpdesk.add_ticket", "helpdesk.change_ticket", "helpdesk.delete_ticket"} {
