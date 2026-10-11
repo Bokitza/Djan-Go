@@ -9,9 +9,26 @@
   {{if not $page.Editable}}<span class="inline-flex items-center gap-1.5 rounded-full bg-amber-50 px-3 py-1 text-xs font-medium text-amber-700 ring-1 ring-amber-200 dark:bg-amber-500/10 dark:text-amber-300 dark:ring-amber-500/20">{{icon "lock" "size-3.5"}} {{t "Read only"}}</span>{{end}}
 </div>
 
-<div class="grid gap-6 lg:grid-cols-3">
+<div class="space-y-6">
+  {{if not $page.IsNew}}
+  <div class="card px-6 py-4">
+    <dl class="flex flex-wrap items-center gap-x-8 gap-y-2 text-sm">
+      <h2 class="font-semibold">{{t "Details"}}</h2>
+      <div class="flex gap-2"><dt class="text-zinc-500">{{t "ID"}}</dt><dd class="font-mono tabular-nums">{{$page.ID}}</dd></div>
+      <div class="flex gap-2"><dt class="text-zinc-500">{{t "Created"}}</dt><dd class="tabular-nums">{{$page.CreatedAt}}</dd></div>
+      <div class="flex gap-2"><dt class="text-zinc-500">{{t "Updated"}}</dt><dd class="tabular-nums">{{$page.UpdatedAt}}</dd></div>
+    </dl>
+    {{if $page.ReadOnlyNotes}}<p class="mt-3 rounded-lg bg-zinc-50 p-3 text-xs text-zinc-500 dark:bg-zinc-800/60">{{$page.ReadOnlyNotes}}</p>{{end}}
+  </div>
+  {{else}}
+  <div class="card flex flex-wrap items-center gap-x-3 gap-y-1 px-6 py-4 text-sm text-zinc-500">
+    <p class="flex items-center gap-2 font-medium text-zinc-900 dark:text-white">{{icon "info"}} {{tf "New %s" $page.Meta.Label}}</p>
+    <p>{{t "Fields marked with * are required."}}</p>
+  </div>
+  {{end}}
+
   <form method="post" action="{{$page.Action}}" hx-post="{{$page.Action}}" hx-target="#main" hx-select="#main" hx-swap="outerHTML show:window:top"
-        class="lg:col-span-2" novalidate>
+        novalidate>
     {{if $page.Errors}}
     <div class="mb-6 flex gap-3 rounded-xl bg-rose-50 p-4 text-sm text-rose-700 ring-1 ring-rose-200 dark:bg-rose-500/10 dark:text-rose-300 dark:ring-rose-500/20">
       {{icon "alert" "size-5"}}
@@ -42,34 +59,18 @@
     </div>
   </form>
 
-  <aside class="space-y-6">
-    {{if not $page.IsNew}}
-    <div class="card p-6">
-      <h2 class="text-sm font-semibold">{{t "Details"}}</h2>
-      <dl class="mt-4 space-y-3 text-sm">
-        <div class="flex justify-between gap-4"><dt class="text-zinc-500">{{t "ID"}}</dt><dd class="font-mono tabular-nums">{{$page.ID}}</dd></div>
-        <div class="flex justify-between gap-4"><dt class="text-zinc-500">{{t "Created"}}</dt><dd class="tabular-nums">{{$page.CreatedAt}}</dd></div>
-        <div class="flex justify-between gap-4"><dt class="text-zinc-500">{{t "Updated"}}</dt><dd class="tabular-nums">{{$page.UpdatedAt}}</dd></div>
-      </dl>
-      {{if $page.ReadOnlyNotes}}<p class="mt-4 rounded-lg bg-zinc-50 p-3 text-xs text-zinc-500 dark:bg-zinc-800/60">{{$page.ReadOnlyNotes}}</p>{{end}}
-    </div>
-    {{if $page.CanDelete}}
-    <div class="card p-6 ring-rose-200/60 dark:ring-rose-500/20">
+  {{if and (not $page.IsNew) $page.CanDelete}}
+  <div class="card flex flex-wrap items-center justify-between gap-4 p-6 ring-rose-200/60 dark:ring-rose-500/20">
+    <div>
       <h2 class="text-sm font-semibold text-rose-600 dark:text-rose-400">{{t "Danger zone"}}</h2>
       <p class="mt-1 text-sm text-zinc-500">{{tf "Deleting this %s cannot be undone." $page.Meta.Label}}</p>
-      <button type="button" class="button button-danger mt-4 w-full" data-action="{{$page.DeleteURL}}" data-title="{{tf "Delete “%s”?" $page.ObjectLabel}}" data-message="{{t "This cannot be undone."}}"
-              @click="$store.confirm.ask({title: $el.dataset.title, message: $el.dataset.message, action: $el.dataset.action})">
-        {{icon "trash"}} {{tf "Delete %s" $page.Meta.Label}}
-      </button>
     </div>
-    {{end}}
-    {{else}}
-    <div class="card p-6 text-sm text-zinc-500">
-      <p class="flex items-center gap-2 font-medium text-zinc-900 dark:text-white">{{icon "info"}} {{tf "New %s" $page.Meta.Label}}</p>
-      <p class="mt-2">{{t "Fields marked with * are required."}}</p>
-    </div>
-    {{end}}
-  </aside>
+    <button type="button" class="button button-danger" data-action="{{$page.DeleteURL}}" data-title="{{tf "Delete “%s”?" $page.ObjectLabel}}" data-message="{{t "This cannot be undone."}}"
+            @click="$store.confirm.ask({title: $el.dataset.title, message: $el.dataset.message, action: $el.dataset.action})">
+      {{icon "trash"}} {{tf "Delete %s" $page.Meta.Label}}
+    </button>
+  </div>
+  {{end}}
 </div>
 {{end}}
 
