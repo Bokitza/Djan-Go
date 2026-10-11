@@ -15,6 +15,7 @@ import (
 	"github.com/yoav/djan-go/admin"
 	"github.com/yoav/djan-go/auth"
 	"github.com/yoav/djan-go/db"
+	"github.com/yoav/djan-go/importexport"
 	"github.com/yoav/djan-go/internal/testdb"
 	"github.com/yoav/djan-go/models"
 	"github.com/yoav/djan-go/query"
@@ -68,6 +69,10 @@ func newSite() *admin.Site {
 			})
 		},
 		CanAdd: func(r *admin.Request) bool { return r.User.Username != "noadd" },
+		ImportExport: &admin.ImportExport[Ticket]{
+			Import: true, Export: true, ExportSelected: true,
+			Resources: []importexport.Resource[Ticket]{ticketResource},
+		},
 	})
 	return site
 }

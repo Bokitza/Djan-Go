@@ -45,6 +45,9 @@ type ModelAdmin[T any] struct {
 	// AfterSave runs after the object was saved, in the same transaction.
 	AfterSave func(r *Request, object *T, isNew bool) error
 
+	// ImportExport enables importing and exporting data; nil disables both.
+	ImportExport *ImportExport[T]
+
 	extras []extraField
 }
 

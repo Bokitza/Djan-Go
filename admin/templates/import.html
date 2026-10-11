@@ -1,0 +1,138 @@
+{{define "content"}}
+{{$page := .Page}}
+<div class="mb-6 flex flex-wrap items-center gap-4">
+  <span class="grid size-11 place-items-center rounded-xl bg-indigo-50 text-indigo-600 ring-1 ring-indigo-100 dark:bg-indigo-500/10 dark:text-indigo-300 dark:ring-indigo-500/20">{{icon "upload" "size-5"}}</span>
+  <div class="min-w-0 flex-1">
+    <p class="text-xs font-medium tracking-wide text-zinc-500 uppercase">{{$page.Meta.App}}</p>
+    <h1 class="text-2xl font-semibold tracking-tight">Import {{$page.Meta.Plural}}</h1>
+  </div>
+  <a href="{{$page.Meta.URL}}" class="button button-ghost">{{icon "chevron-left"}} Back to {{$page.Meta.Plural}}</a>
+</div>
+
+{{if $page.Error}}
+<div class="mb-6 flex gap-3 rounded-xl bg-rose-50 p-4 text-sm text-rose-700 ring-1 ring-rose-200 dark:bg-rose-500/10 dark:text-rose-300 dark:ring-rose-500/20">
+  {{icon "alert" "size-5"}}<p>{{$page.Error}}</p>
+</div>
+{{end}}
+
+{{with $page.Preview}}{{template "preview" $page}}{{else}}{{template "upload" $page}}{{end}}
+{{end}}
+
+{{define "upload"}}
+<div class="grid gap-6 lg:grid-cols-3" x-data="{ resource: '{{.Resource}}' }">
+  <form method="post" action="{{.Action}}" enctype="multipart/form-data" class="card space-y-6 p-6 lg:col-span-2">
+    {{if gt (len .Transfer.Resources) 1}}
+    <div>
+      <label for="import-resource" class="mb-1.5 block text-sm font-medium text-zinc-800 dark:text-zinc-200">Resource</label>
+      <select id="import-resource" name="resource" x-model="resource" class="input pr-8">
+        {{range .Transfer.Resources}}<option value="{{.Index}}">{{.Name}}</option>{{end}}
+      </select>
+    </div>
+    {{else}}
+    <input type="hidden" name="resource" value="0">
+    {{end}}
+    <div>
+      <label for="import-file" class="mb-1.5 block text-sm font-medium text-zinc-800 dark:text-zinc-200">File<span class="text-rose-500"> *</span></label>
+      <input type="file" id="import-file" name="file" accept="{{.Accept}}" required
+             class="block w-full text-sm text-zinc-600 file:mr-4 file:rounded-lg file:border-0 file:bg-indigo-50 file:px-4 file:py-2 file:text-sm file:font-medium file:text-indigo-700 hover:file:bg-indigo-100 dark:text-zinc-300 dark:file:bg-indigo-500/10 dark:file:text-indigo-300">
+      <p class="mt-1.5 text-xs text-zinc-500">Accepted formats: {{.Extensions}}. The file is checked first; nothing is saved until you confirm.</p>
+    </div>
+    <div class="flex justify-end gap-2">
+      <a href="{{.Meta.URL}}" class="button button-ghost mr-auto">Cancel</a>
+      <button type="submit" class="button button-primary">{{icon "eye"}} Preview import</button>
+    </div>
+  </form>
+
+  <aside class="card p-6 text-sm">
+    <h2 class="flex items-center gap-2 font-semibold">{{icon "info"}} Expected columns</h2>
+    {{range .Transfer.Resources}}
+    <div x-show="resource === '{{.Index}}'" {{if ne .Index 0}}x-cloak{{end}} class="mt-4">
+      {{if .Error}}<p class="text-rose-600 dark:text-rose-400">{{.Error}}</p>{{else}}
+      <div class="flex flex-wrap gap-1.5">
+        {{range .Headers}}<code class="rounded-md bg-zinc-100 px-2 py-0.5 font-mono text-xs text-zinc-700 dark:bg-zinc-800 dark:text-zinc-300">{{.}}</code>{{end}}
+      </div>
+      {{end}}
+    </div>
+    {{end}}
+    <p class="mt-4 text-xs text-zinc-500">The first row must hold the column names. Rows matching an existing {{.Meta.Label}} update it; other rows create new ones.</p>
+  </aside>
+</div>
+{{end}}
+
+{{define "preview"}}
+{{$preview := .Preview}}
+<div class="mb-6 grid gap-3 sm:grid-cols-5">
+  {{template "total" (dict "Label" "New" "Count" $preview.Totals.New "Tone" "emerald")}}
+  {{template "total" (dict "Label" "Updated" "Count" $preview.Totals.Update "Tone" "sky")}}
+  {{template "total" (dict "Label" "Skipped" "Count" $preview.Totals.Skip "Tone" "zinc")}}
+  {{template "total" (dict "Label" "Invalid" "Count" $preview.Totals.Invalid "Tone" "amber")}}
+  {{template "total" (dict "Label" "Errors" "Count" $preview.Totals.Error "Tone" "rose")}}
+</div>
+
+<div class="card mb-6 flex flex-wrap items-center gap-4 p-4">
+  <p class="min-w-0 flex-1 text-sm">
+    {{if $preview.CanConfirm}}<span class="font-medium">{{$preview.Filename}}</span> looks good. Nothing has been saved yet.
+    {{else}}<span class="font-medium text-rose-600 dark:text-rose-400">{{$preview.Filename}} has problems.</span> Fix the rows below and upload the file again; nothing was saved.{{end}}
+  </p>
+  <a href="{{.Action}}" class="button button-secondary">{{icon "upload"}} Choose another file</a>
+  {{if $preview.CanConfirm}}
+  <form method="post" action="{{.Action}}" enctype="multipart/form-data">
+    <input type="hidden" name="_confirm" value="1">
+    <input type="hidden" name="resource" value="{{.Resource}}">
+    <input type="hidden" name="filename" value="{{$preview.Filename}}">
+    <input type="hidden" name="data" value="{{$preview.Data}}">
+    <button type="submit" class="button button-primary">{{icon "check"}} Confirm import</button>
+  </form>
+  {{end}}
+</div>
+
+<div class="card overflow-hidden">
+  {{if $preview.OnlyIssues}}<p class="border-b border-zinc-200 px-4 py-3 text-sm text-zinc-500 dark:border-zinc-800">Showing only the rows with problems.</p>{{end}}
+  <div class="overflow-x-auto">
+    <table class="min-w-full text-sm">
+      <thead class="border-b border-zinc-200 bg-zinc-50/80 text-left text-xs font-medium text-zinc-500 dark:border-zinc-800 dark:bg-zinc-900/60 dark:text-zinc-400">
+        <tr>
+          <th class="px-4 py-3">Row</th>
+          <th class="px-4 py-3">Result</th>
+          <th class="px-4 py-3">Object</th>
+          {{range $preview.Headers}}<th class="px-4 py-3 whitespace-nowrap">{{.}}</th>{{end}}
+        </tr>
+      </thead>
+      <tbody class="divide-y divide-zinc-100 dark:divide-zinc-800">
+        {{range $preview.Rows}}
+        <tr class="align-top">
+          <td class="px-4 py-3 text-zinc-500 tabular-nums">{{.Number}}</td>
+          <td class="px-4 py-3">{{template "rowType" .Type}}</td>
+          <td class="max-w-xs px-4 py-3">
+            {{if .URL}}<a href="{{.URL}}" class="font-medium text-zinc-900 hover:text-indigo-600 dark:text-white dark:hover:text-indigo-400">{{.Object}}</a>{{else}}{{.Object}}{{end}}
+            {{range .Errors}}<p class="mt-1 flex gap-1 text-xs text-rose-600 dark:text-rose-400">{{icon "alert" "size-3.5"}} {{.}}</p>{{end}}
+          </td>
+          {{range .Cells}}
+          <td class="max-w-xs px-4 py-3 {{if .Error}}bg-rose-50/60 dark:bg-rose-500/5{{end}}">
+            <span class="block truncate text-zinc-600 dark:text-zinc-300">{{.Text}}</span>
+            {{if .Error}}<p class="mt-1 text-xs text-rose-600 dark:text-rose-400">{{.Error}}</p>{{end}}
+          </td>
+          {{end}}
+        </tr>
+        {{end}}
+      </tbody>
+    </table>
+  </div>
+  {{if $preview.Hidden}}<p class="border-t border-zinc-200 px-4 py-3 text-sm text-zinc-500 dark:border-zinc-800">{{$preview.Hidden}} more rows are not shown.</p>{{end}}
+</div>
+{{end}}
+
+{{define "total"}}
+<div class="card p-4">
+  <p class="text-xs font-medium text-zinc-500">{{.Label}}</p>
+  <p class="mt-1 text-2xl font-semibold tabular-nums {{if and .Count (eq .Tone "emerald")}}text-emerald-600 dark:text-emerald-400{{else if and .Count (eq .Tone "sky")}}text-sky-600 dark:text-sky-400{{else if and .Count (eq .Tone "amber")}}text-amber-600 dark:text-amber-400{{else if and .Count (eq .Tone "rose")}}text-rose-600 dark:text-rose-400{{end}}">{{.Count}}</p>
+</div>
+{{end}}
+
+{{define "rowType"}}
+{{if eq . "new"}}<span class="rounded-full bg-emerald-50 px-2 py-0.5 text-xs font-medium text-emerald-700 ring-1 ring-emerald-200 dark:bg-emerald-500/10 dark:text-emerald-300 dark:ring-emerald-500/20">New</span>
+{{else if eq . "update"}}<span class="rounded-full bg-sky-50 px-2 py-0.5 text-xs font-medium text-sky-700 ring-1 ring-sky-200 dark:bg-sky-500/10 dark:text-sky-300 dark:ring-sky-500/20">Update</span>
+{{else if eq . "skip"}}<span class="rounded-full bg-zinc-100 px-2 py-0.5 text-xs font-medium text-zinc-600 dark:bg-zinc-800 dark:text-zinc-300">Skip</span>
+{{else if eq . "invalid"}}<span class="rounded-full bg-amber-50 px-2 py-0.5 text-xs font-medium text-amber-700 ring-1 ring-amber-200 dark:bg-amber-500/10 dark:text-amber-300 dark:ring-amber-500/20">Invalid</span>
+{{else}}<span class="rounded-full bg-rose-50 px-2 py-0.5 text-xs font-medium text-rose-700 ring-1 ring-rose-200 dark:bg-rose-500/10 dark:text-rose-300 dark:ring-rose-500/20">Error</span>{{end}}
+{{end}}

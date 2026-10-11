@@ -126,6 +126,11 @@ type listPage struct {
 	BulkDeleteURL string
 	ClearURL      string
 	Hidden        []hiddenParameter
+	Transfer      transferPolicy
+	Selectable    bool
+	ImportURL     string
+	ExportURL     string
+	ExportLinks   []exportLink
 }
 
 type hiddenParameter struct{ Name, Value string }
@@ -260,17 +265,57 @@ func filterCond(field *models.Field, raw string) (query.Cond, bool) {
 	return query.FieldLookup(field, "exact", value), true
 }
 
+func validSortKey(config *resolvedConfig, key string) bool {
+	for _, column := range config.columns {
+		if column.sortKey() != "" && column.sortKey() == key {
+			return true
+		}
+	}
+	return false
+}
+
+// listQuerySet applies the search, filters and ordering of a list URL to the visible rows.
+func (s *Site) listQuerySet(r *Request, entry modelEntry, values url.Values) query.Dynamic {
+	info, config := entry.info(), entry.config()
+	queryset := entry.viewQuerySet(r)
+	if search := strings.TrimSpace(values.Get("q")); search != "" && len(config.searchFields) > 0 {
+		queryset = queryset.Filter(searchCond(config.searchFields, search))
+	}
+	for _, field := range config.filters {
+		if current := values.Get(filterPrefix + field.LookupName()); current != "" {
+			if cond, ok := filterCond(field, current); ok {
+				queryset = queryset.Filter(cond)
+			}
+		}
+	}
+	order := values.Get("o")
+	switch {
+	case order != "" && validSortKey(config, strings.TrimPrefix(order, "-")):
+		queryset = queryset.OrderByNames(order)
+	case len(config.ordering) > 0:
+		queryset = queryset.OrderByNames(config.ordering...)
+	case len(info.Ordering) == 0:
+		queryset = queryset.OrderByNames("-" + info.PK.LookupName())
+	}
+	return queryset
+}
+
 func (s *Site) listView(w http.ResponseWriter, r *Request, entry modelEntry) {
 	ctx := r.Context()
 	info, config := entry.info(), entry.config()
 	values := r.URL.Query()
 	page := listPage{Meta: s.meta(r, entry), HasSearch: len(config.searchFields) > 0, ListURL: s.modelURL(info),
 		BulkDeleteURL: s.modelURL(info) + "bulk-delete/", Hidden: listState(values)}
-	queryset := entry.viewQuerySet(r)
-
+	queryset := s.listQuerySet(r, entry, values)
 	page.Search = strings.TrimSpace(values.Get("q"))
-	if page.Search != "" && page.HasSearch {
-		queryset = queryset.Filter(searchCond(config.searchFields, page.Search))
+	page.Transfer = entry.transfer(r)
+	page.Selectable = page.Meta.Permissions.Delete || page.Transfer.ExportSelected
+	if page.Transfer.Import {
+		page.ImportURL = s.modelURL(info) + "import/"
+	}
+	page.ExportURL = s.modelURL(info) + "export/"
+	if page.Transfer.Export || page.Transfer.ExportSelected {
+		page.ExportLinks = exportLinks(page.Transfer)
 	}
 
 	var dropOnClear []string
@@ -287,28 +332,13 @@ func (s *Site) listView(w http.ResponseWriter, r *Request, entry modelEntry) {
 				page.ActiveFilters = append(page.ActiveFilters, activeFilter{Label: field.VerboseName + ": " + option.Label, RemoveURL: withQuery(values, parameter, "", "p")})
 			}
 		}
-		if current != "" {
-			if cond, ok := filterCond(field, current); ok {
-				queryset = queryset.Filter(cond)
-			}
-		}
 		page.Filters = append(page.Filters, group)
 	}
 	page.ClearURL = withQuery(values, "", "", append(dropOnClear, "p", "q")...)
 
 	order := values.Get("o")
 	sortKey := strings.TrimPrefix(order, "-")
-	validSort := false
-	for _, column := range config.columns {
-		validSort = validSort || (column.sortKey() != "" && column.sortKey() == sortKey)
-	}
-	if order != "" && validSort {
-		queryset = queryset.OrderByNames(order)
-	} else if len(config.ordering) > 0 {
-		queryset = queryset.OrderByNames(config.ordering...)
-	} else if len(info.Ordering) == 0 {
-		queryset = queryset.OrderByNames("-" + info.PK.LookupName())
-	}
+	validSort := validSortKey(config, sortKey)
 	for _, column := range config.columns {
 		header := listHeader{Label: column.label}
 		if key := column.sortKey(); key != "" {

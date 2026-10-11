@@ -13,6 +13,7 @@ import (
 	"strings"
 
 	"github.com/yoav/djan-go/auth"
+	"github.com/yoav/djan-go/importexport"
 	"github.com/yoav/djan-go/models"
 	"github.com/yoav/djan-go/query"
 )
@@ -52,6 +53,9 @@ type modelEntry interface {
 	beforeSave(r *Request, object any, isNew bool) error
 	afterSave(r *Request, object any, isNew bool) error
 	extraFields() []extraField
+	transfer(r *Request) transferPolicy
+	exportDataset(r *Request, resource int, queryset query.Dynamic) (*importexport.Dataset, error)
+	importDataset(r *Request, resource int, dataset *importexport.Dataset, dryRun bool) (*importexport.Result, error)
 }
 
 type entry[T any] struct {
@@ -121,6 +125,16 @@ func Register[T any](site *Site, modelAdmin ModelAdmin[T]) {
 		modelAdmin.Configure((*T)(info.Probe()), config)
 	}
 	resolved, problems := resolveConfig(info, config)
+	if policy := modelAdmin.ImportExport; policy != nil {
+		if !policy.Import && !policy.Export && !policy.ExportSelected {
+			problems = append(problems, errors.New("ImportExport: enable Import, Export or ExportSelected"))
+		}
+		for _, resource := range policy.Resources {
+			if err := resource.Check(); err != nil {
+				problems = append(problems, fmt.Errorf("ImportExport: %w", err))
+			}
+		}
+	}
 	if len(problems) > 0 {
 		messages := make([]string, len(problems))
 		for index, problem := range problems {
@@ -250,6 +264,10 @@ func (s *Site) Handler() http.Handler {
 	mux.Handle("POST "+prefix+"/{app}/{model}/add/{$}", staff(s.withModel(s.addView)))
 	mux.Handle("GET "+prefix+"/{app}/{model}/autocomplete/{$}", staff(s.withModel(s.autocomplete)))
 	mux.Handle("POST "+prefix+"/{app}/{model}/bulk-delete/{$}", staff(s.withModel(s.bulkDelete)))
+	mux.Handle("GET "+prefix+"/{app}/{model}/import/{$}", staff(s.withModel(s.importView)))
+	mux.Handle("POST "+prefix+"/{app}/{model}/import/{$}", staff(s.withModel(s.importView)))
+	mux.Handle("GET "+prefix+"/{app}/{model}/export/{$}", staff(s.withModel(s.exportView)))
+	mux.Handle("POST "+prefix+"/{app}/{model}/export/{$}", staff(s.withModel(s.exportView)))
 	mux.Handle("GET "+prefix+"/{app}/{model}/{id}/{$}", staff(s.withModel(s.changeView)))
 	mux.Handle("POST "+prefix+"/{app}/{model}/{id}/{$}", staff(s.withModel(s.changeView)))
 	mux.Handle("POST "+prefix+"/{app}/{model}/{id}/delete/{$}", staff(s.withModel(s.deleteView)))

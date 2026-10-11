@@ -23,6 +23,9 @@ that field references are checked by the compiler instead of being passed around
 - **Admin** (`admin`): an auto-generated admin site (HTMX + Alpine + Tailwind, all embedded) with
   list displays, search, filters, forms and per-user permission hooks.
 - **Auth** (`auth`): users, password hashing, sessions and permissions, with built-in migrations.
+- **Import/export** (`importexport`): django-import-export style resources that move model data
+  to and from CSV, TSV and JSON, with custom headers, foreign key lookups by name, computed
+  columns, skip-unchanged, dry runs and per-row error reports, all inside a transaction.
 - **Management commands** (`management`): `check`, `makemigrations`, `migrate`,
   `showmigrations`, `createsuperuser`, `runserver`, plus your own custom commands.
 
@@ -103,6 +106,7 @@ Each test gets its own fresh database.
 | `migrations/` | Migration autodetection, files and runner |
 | `admin/` | Admin site, views, templates and static assets |
 | `auth/` | Users, passwords, sessions, permissions |
+| `importexport/` | Resources, widgets and CSV/TSV/JSON formats for data import and export |
 | `management/` | Command-line entry point for apps |
 | `db/` | Connection pool plumbing via `context` |
 | `example/` | Example blog app |

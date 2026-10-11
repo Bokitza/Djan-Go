@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"encoding/base64"
 	"encoding/json"
+	"fmt"
 	"html/template"
 	"log"
 	"net/http"
@@ -13,7 +14,7 @@ import (
 	"github.com/yoav/djan-go/auth"
 )
 
-var pages = []string{"login.html", "dashboard.html", "list.html", "form.html", "error.html"}
+var pages = []string{"login.html", "dashboard.html", "list.html", "form.html", "error.html", "import.html"}
 
 const flashCookie = "djan_flash"
 
@@ -74,6 +75,13 @@ func (s *Site) loadTemplates() (map[string]*template.Template, error) {
 		},
 		"add":  func(a, b int) int { return a + b },
 		"icon": icon,
+		"dict": func(pairs ...any) map[string]any {
+			values := map[string]any{}
+			for index := 0; index+1 < len(pairs); index += 2 {
+				values[fmt.Sprint(pairs[index])] = pairs[index+1]
+			}
+			return values
+		},
 	}
 	templates := map[string]*template.Template{}
 	for _, page := range pages {

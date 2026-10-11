@@ -118,6 +118,14 @@ document.addEventListener('alpine:init', () => {
   }))
 })
 
+window.exportURL = (base, format, resource) => {
+  const parameters = new URLSearchParams(window.location.search)
+  parameters.delete('p')
+  parameters.set('format', format)
+  parameters.set('resource', resource)
+  return base + '?' + parameters
+}
+
 document.addEventListener('keydown', (event) => {
   if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === 'k') {
     event.preventDefault()

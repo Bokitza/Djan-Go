@@ -6,6 +6,7 @@ import (
 
 	"github.com/yoav/djan-go/admin"
 	"github.com/yoav/djan-go/auth"
+	"github.com/yoav/djan-go/importexport"
 	"github.com/yoav/djan-go/query"
 )
 
@@ -71,6 +72,10 @@ func RegisterAdmin(site *admin.Site) {
 		CanAdd: func(r *admin.Request) bool {
 			return r.User.IsSuperuser || AuthorFor(r.Context(), r.User) != nil
 		},
+		ImportExport: &admin.ImportExport[Post]{
+			Import: true, Export: true, ExportSelected: true,
+			Resources: []importexport.Resource[Post]{postResource},
+		},
 		BeforeSave: func(r *admin.Request, post *Post, isNew bool) error {
 			if r.User.IsSuperuser {
 				return nil
@@ -98,6 +103,16 @@ func RegisterAdmin(site *admin.Site) {
 			}
 			return authors.Where(func(a *Author) query.Cond { return query.Eq(&a.User.ID, r.User.ID) })
 		},
+		ImportExport: &admin.ImportExport[Author]{
+			Import: true, Export: true,
+			Resources: []importexport.Resource[Author]{{
+				Configure: func(a *Author, config *importexport.Config) {
+					config.Fields(importexport.F(&a.Name), importexport.F(&a.Email), importexport.F(&a.Bio))
+					config.ImportIDFields(importexport.F(&a.Name))
+					config.SkipUnchanged()
+				},
+			}},
+		},
 	})
 
 	admin.Register(site, admin.ModelAdmin[Tag]{
@@ -106,6 +121,7 @@ func RegisterAdmin(site *admin.Site) {
 			config.ListDisplay(admin.F(&t.Name), admin.F(&t.Slug), admin.F(&t.CreatedAt))
 			config.SearchFields(&t.Name)
 		},
+		ImportExport: &admin.ImportExport[Tag]{Import: true, Export: true},
 	})
 
 	admin.Register(site, admin.ModelAdmin[PostTag]{
@@ -124,5 +140,38 @@ func RegisterAdmin(site *admin.Site) {
 			config.ListFilter(admin.F(&c.Approved), admin.F(&c.Post), admin.F(&c.CreatedAt))
 			config.PerPage(20)
 		},
+		ImportExport: &admin.ImportExport[Comment]{
+			ExportSelected: true,
+			Resources: []importexport.Resource[Comment]{{
+				Configure: func(c *Comment, config *importexport.Config) {
+					config.Fields(
+						importexport.Through(&c.Post, func(p *Post) importexport.Field { return importexport.F(&p.Title) }).Header("post"),
+						importexport.F(&c.Name),
+						importexport.F(&c.Body),
+						importexport.F(&c.Approved),
+						importexport.F(&c.CreatedAt),
+					)
+				},
+			}},
+		},
 	})
+}
+
+// postResource exchanges posts keyed by slug, with authors referenced by name.
+var postResource = importexport.Resource[Post]{
+	Name: "Posts",
+	Configure: func(p *Post, config *importexport.Config) {
+		config.Fields(
+			importexport.F(&p.Slug),
+			importexport.F(&p.Title),
+			importexport.F(&p.Author).Widget(importexport.ForeignKey(func(a *Author) *string { return &a.Name })),
+			importexport.F(&p.Status),
+			importexport.F(&p.Featured),
+			importexport.F(&p.Summary),
+			importexport.F(&p.Body),
+			importexport.F(&p.PublishedAt).ReadOnly(),
+		)
+		config.ImportIDFields(importexport.F(&p.Slug))
+		config.SkipUnchanged()
+	},
 }

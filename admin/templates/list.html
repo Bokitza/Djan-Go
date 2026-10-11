@@ -9,6 +9,22 @@
         <span class="rounded-full bg-zinc-100 px-2.5 py-0.5 text-xs font-medium text-zinc-600 tabular-nums dark:bg-zinc-800 dark:text-zinc-300">{{$page.Total}}</span>
       </h1>
     </div>
+    {{if $page.ImportURL}}<a href="{{$page.ImportURL}}" class="button button-secondary">{{icon "upload"}} Import</a>{{end}}
+    {{if and $page.Transfer.Export $page.ExportLinks}}
+    <div x-data="{ open: false }" class="relative" @click.outside="open = false">
+      <button type="button" @click="open = !open" class="button button-secondary">{{icon "download"}} Export <span class="text-zinc-400">{{icon "chevron-down" "size-3.5"}}</span></button>
+      <div x-cloak x-show="open" x-transition.origin.top.right class="absolute right-0 z-20 mt-2 w-60 rounded-xl bg-white p-1.5 shadow-lg ring-1 ring-zinc-950/10 dark:bg-zinc-900 dark:ring-white/10">
+        <p class="px-3 pt-1 pb-2 text-xs text-zinc-500">Downloads every row matching the current search and filters.</p>
+        {{$group := ""}}
+        {{range $page.ExportLinks}}
+        {{if and .Group (ne .Group $group)}}<p class="px-3 pt-2 pb-1 text-[11px] font-semibold tracking-wider text-zinc-400 uppercase">{{.Group}}</p>{{$group = .Group}}{{end}}
+        <a href="{{$page.ExportURL}}?format={{.Format}}&resource={{.Resource}}" data-format="{{.Format}}" data-resource="{{.Resource}}"
+           @click.prevent="open = false; window.location.href = exportURL('{{$page.ExportURL}}', $el.dataset.format, $el.dataset.resource)"
+           class="flex items-center gap-2 rounded-lg px-3 py-2 text-sm text-zinc-700 hover:bg-zinc-50 dark:text-zinc-300 dark:hover:bg-zinc-800">{{icon "download" "size-3.5"}} {{.Label}}</a>
+        {{end}}
+      </div>
+    </div>
+    {{end}}
     {{if $page.Meta.AddURL}}<a href="{{$page.Meta.AddURL}}" class="button button-primary">{{icon "plus"}} Add {{$page.Meta.Label}}</a>{{end}}
   </div>
 
@@ -54,6 +70,21 @@
   <div x-cloak x-show="selected.length > 0" x-transition class="fixed inset-x-0 bottom-6 z-30 mx-auto flex w-fit items-center gap-4 rounded-2xl bg-zinc-900 py-2 pr-2 pl-5 text-sm text-white shadow-2xl ring-1 ring-white/10 dark:bg-white dark:text-zinc-900">
     <span><span class="font-semibold tabular-nums" x-text="selected.length"></span> selected</span>
     <button type="button" class="button px-3 py-1.5 text-zinc-300 hover:text-white dark:text-zinc-600 dark:hover:text-zinc-900" @click="clear()">Clear</button>
+    {{if and $page.Transfer.ExportSelected $page.ExportLinks}}
+    <form method="post" :action="'{{$page.ExportURL}}' + window.location.search" x-data="{ menu: false }" class="relative" @click.outside="menu = false">
+      <template x-for="id in selected" :key="id"><input type="hidden" name="ids" :value="id"></template>
+      <input type="hidden" name="resource" value="0" x-ref="resource">
+      <button type="button" @click="menu = !menu" class="button px-3 py-1.5 text-zinc-300 hover:text-white dark:text-zinc-600 dark:hover:text-zinc-900">{{icon "download" "size-3.5"}} Export</button>
+      <div x-cloak x-show="menu" x-transition class="absolute right-0 bottom-full mb-3 w-48 rounded-xl bg-white p-1.5 text-zinc-700 shadow-lg ring-1 ring-zinc-950/10 dark:bg-zinc-900 dark:text-zinc-300 dark:ring-white/10">
+        {{$group := ""}}
+        {{range $page.ExportLinks}}
+        {{if and .Group (ne .Group $group)}}<p class="px-3 pt-2 pb-1 text-[11px] font-semibold tracking-wider text-zinc-400 uppercase">{{.Group}}</p>{{$group = .Group}}{{end}}
+        <button type="submit" name="format" value="{{.Format}}" data-resource="{{.Resource}}" @click="$refs.resource.value = $el.dataset.resource; menu = false"
+                class="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left text-sm hover:bg-zinc-50 dark:hover:bg-zinc-800">{{icon "download" "size-3.5"}} {{.Label}}</button>
+        {{end}}
+      </div>
+    </form>
+    {{end}}
     {{if $page.Meta.Permissions.Delete}}
     <button type="button" class="button button-danger px-3 py-1.5"
             data-title="Delete selected {{$page.Meta.Plural}}?" data-action="{{$page.BulkDeleteURL}}"
@@ -74,7 +105,7 @@
       <table class="min-w-full text-sm">
         <thead class="border-b border-zinc-200 bg-zinc-50/80 text-left text-xs font-medium text-zinc-500 dark:border-zinc-800 dark:bg-zinc-900/60 dark:text-zinc-400">
           <tr>
-            {{if $page.Meta.Permissions.Delete}}
+            {{if $page.Selectable}}
             <th class="w-10 py-3 pl-4"><input type="checkbox" :checked="allChecked()" @change="toggleAll($event)" class="size-4 rounded border-zinc-300 text-indigo-600 focus:ring-indigo-500 dark:border-zinc-600 dark:bg-zinc-800"></th>
             {{end}}
             {{range $page.Headers}}
@@ -96,9 +127,9 @@
         <tbody class="divide-y divide-zinc-100 dark:divide-zinc-800">
           {{range $row := $page.Rows}}
           <tr class="group transition hover:bg-zinc-50/80 dark:hover:bg-zinc-800/40" :class="selected.includes('{{$row.ID}}') && 'bg-indigo-50/60 dark:bg-indigo-500/5'">
-            {{if $page.Meta.Permissions.Delete}}
+            {{if $page.Selectable}}
             <td class="py-3 pl-4">
-              {{if $row.CanDelete}}<input type="checkbox" data-row value="{{$row.ID}}" x-model="selected" class="size-4 rounded border-zinc-300 text-indigo-600 focus:ring-indigo-500 dark:border-zinc-600 dark:bg-zinc-800">{{end}}
+              {{if or $row.CanDelete $page.Transfer.ExportSelected}}<input type="checkbox" data-row value="{{$row.ID}}" x-model="selected" class="size-4 rounded border-zinc-300 text-indigo-600 focus:ring-indigo-500 dark:border-zinc-600 dark:bg-zinc-800">{{end}}
             </td>
             {{end}}
             {{range $index, $cell := $row.Cells}}
