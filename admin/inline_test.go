@@ -225,3 +225,42 @@ func TestInlineRegistrationErrors(t *testing.T) {
 		admin.Register(admin.NewSite("x"), admin.ModelAdmin[Ticket]{Inlines: []admin.Inline[Ticket]{inline, inline}})
 	})
 }
+
+func TestNamedInlinesShareAForeignKey(t *testing.T) {
+	f := setup(t)
+	for _, comment := range []*Comment{
+		{Ticket: models.RefTo(f.tickets["alice open"]), Body: "public"},
+		{Ticket: models.RefTo(f.tickets["alice open"]), Body: "staff", Internal: true},
+	} {
+		if err := query.Create(f.ctx, comment); err != nil {
+			t.Fatal(err)
+		}
+	}
+	internal := func(isInternal bool) func(*admin.Request, *Ticket, query.QuerySet[Comment]) query.QuerySet[Comment] {
+		return func(_ *admin.Request, _ *Ticket, comments query.QuerySet[Comment]) query.QuerySet[Comment] {
+			return comments.Where(func(c *Comment) query.Cond { return query.Eq(&c.Internal, isInternal) })
+		}
+	}
+	site := newSite()
+	admin.Unregister[Ticket](site)
+	admin.Register(site, admin.ModelAdmin[Ticket]{Inlines: []admin.Inline[Ticket]{
+		admin.InlineAdmin[Ticket, Comment]{Name: "public", Label: "Public comments", QuerySet: internal(false)},
+		admin.InlineAdmin[Ticket, Comment]{Name: "internal", Label: "Internal comments", QuerySet: internal(true)},
+	}})
+	server := httptest.NewServer(withPool(f.pool, site.Handler()))
+	t.Cleanup(server.Close)
+	f.server = server
+	if _, err := auth.CreateSuperuser(f.ctx, "root", "", "password-root"); err != nil {
+		t.Fatal(err)
+	}
+
+	_, body := f.login(t, "root").get("/admin/helpdesk/ticket/"+strconv.FormatInt(f.tickets["alice open"].ID, 10)+"/", nil)
+	for _, want := range []string{
+		"Public comments", `name="comment_ticket_public-0-body" value="public"`,
+		"Internal comments", `name="comment_ticket_internal-0-body" value="staff"`,
+	} {
+		if !strings.Contains(body, want) {
+			t.Errorf("form is missing %q", want)
+		}
+	}
+}

@@ -39,6 +39,9 @@ type InlineAdmin[T, C any] struct {
 	// ForeignKey picks the foreign key of C that points at T (Django's fk_name). It may be left
 	// out when C has exactly one foreign key to T.
 	ForeignKey func(child *C) *models.FK[T]
+	// Name tells apart inlines of the same model and foreign key on one form, e.g. one per
+	// QuerySet. It becomes part of the form field names, so use letters, digits and underscores.
+	Name string
 	// Label is the section title (default: the plural name of C).
 	Label string
 	// Help is shown under the title.
@@ -98,6 +101,9 @@ func (a InlineAdmin[T, C]) editorFor(*T) (extraField, error) {
 		}
 	}
 	editor.prefix = child.Key() + "_" + editor.foreignKey.LookupName()
+	if a.Name != "" {
+		editor.prefix += "_" + a.Name
+	}
 
 	config := &InlineConfig{}
 	if a.Configure != nil {
