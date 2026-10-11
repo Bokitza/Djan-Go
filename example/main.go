@@ -11,9 +11,9 @@ package main
 import (
 	"os"
 
-	"github.com/yoav-rogat/djan-go/admin"
-	"github.com/yoav-rogat/djan-go/example/blog"
-	"github.com/yoav-rogat/djan-go/management"
+	"github.com/Bokitza/djan-go/admin"
+	"github.com/Bokitza/djan-go/example/blog"
+	"github.com/Bokitza/djan-go/management"
 )
 
 func main() {

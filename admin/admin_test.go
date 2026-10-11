@@ -11,14 +11,14 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/Bokitza/djan-go/admin"
+	"github.com/Bokitza/djan-go/auth"
+	"github.com/Bokitza/djan-go/db"
+	"github.com/Bokitza/djan-go/importexport"
+	"github.com/Bokitza/djan-go/models"
+	"github.com/Bokitza/djan-go/query"
+	"github.com/Bokitza/djan-go/testdb"
 	"github.com/jackc/pgx/v5/pgxpool"
-	"github.com/yoav-rogat/djan-go/admin"
-	"github.com/yoav-rogat/djan-go/auth"
-	"github.com/yoav-rogat/djan-go/db"
-	"github.com/yoav-rogat/djan-go/importexport"
-	"github.com/yoav-rogat/djan-go/testdb"
-	"github.com/yoav-rogat/djan-go/models"
-	"github.com/yoav-rogat/djan-go/query"
 )
 
 type Ticket struct {

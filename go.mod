@@ -1,4 +1,4 @@
-module github.com/yoav-rogat/djan-go
+module github.com/Bokitza/djan-go
 
 go 1.27.1
 

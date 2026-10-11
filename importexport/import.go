@@ -9,9 +9,9 @@ import (
 	"strings"
 	"time"
 
-	"github.com/yoav-rogat/djan-go/db"
-	"github.com/yoav-rogat/djan-go/models"
-	"github.com/yoav-rogat/djan-go/query"
+	"github.com/Bokitza/djan-go/db"
+	"github.com/Bokitza/djan-go/models"
+	"github.com/Bokitza/djan-go/query"
 )
 
 // RowType is the outcome of importing one row.

@@ -6,7 +6,7 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/yoav-rogat/djan-go/models"
+	"github.com/Bokitza/djan-go/models"
 )
 
 // QuoteIdentifier quotes a SQL identifier.

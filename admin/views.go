@@ -11,11 +11,11 @@ import (
 	"strings"
 	"time"
 
+	"github.com/Bokitza/djan-go/auth"
+	"github.com/Bokitza/djan-go/db"
+	"github.com/Bokitza/djan-go/models"
+	"github.com/Bokitza/djan-go/query"
 	"github.com/jackc/pgx/v5/pgconn"
-	"github.com/yoav-rogat/djan-go/auth"
-	"github.com/yoav-rogat/djan-go/db"
-	"github.com/yoav-rogat/djan-go/models"
-	"github.com/yoav-rogat/djan-go/query"
 )
 
 type modelMeta struct {

@@ -5,9 +5,9 @@ import (
 	"testing"
 	"time"
 
+	"github.com/Bokitza/djan-go/models"
+	"github.com/Bokitza/djan-go/testdb"
 	"github.com/shopspring/decimal"
-	"github.com/yoav-rogat/djan-go/testdb"
-	"github.com/yoav-rogat/djan-go/models"
 )
 
 type ledgerEntry struct {

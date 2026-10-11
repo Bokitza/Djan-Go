@@ -12,9 +12,9 @@ import (
 	"time"
 	"unicode/utf8"
 
+	"github.com/Bokitza/djan-go/models"
+	"github.com/Bokitza/djan-go/query"
 	"github.com/shopspring/decimal"
-	"github.com/yoav-rogat/djan-go/models"
-	"github.com/yoav-rogat/djan-go/query"
 )
 
 type choiceOption struct {

@@ -14,10 +14,10 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/yoav-rogat/djan-go/admin"
-	"github.com/yoav-rogat/djan-go/auth"
-	"github.com/yoav-rogat/djan-go/importexport"
-	"github.com/yoav-rogat/djan-go/query"
+	"github.com/Bokitza/djan-go/admin"
+	"github.com/Bokitza/djan-go/auth"
+	"github.com/Bokitza/djan-go/importexport"
+	"github.com/Bokitza/djan-go/query"
 )
 
 var ticketResource = importexport.Resource[Ticket]{

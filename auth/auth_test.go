@@ -7,9 +7,9 @@ import (
 	"testing"
 	"time"
 
-	"github.com/yoav-rogat/djan-go/auth"
-	"github.com/yoav-rogat/djan-go/testdb"
-	"github.com/yoav-rogat/djan-go/query"
+	"github.com/Bokitza/djan-go/auth"
+	"github.com/Bokitza/djan-go/query"
+	"github.com/Bokitza/djan-go/testdb"
 )
 
 func TestPasswordHashing(t *testing.T) {

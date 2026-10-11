@@ -12,10 +12,10 @@ import (
 	"sort"
 	"strings"
 
-	"github.com/yoav-rogat/djan-go/auth"
-	"github.com/yoav-rogat/djan-go/importexport"
-	"github.com/yoav-rogat/djan-go/models"
-	"github.com/yoav-rogat/djan-go/query"
+	"github.com/Bokitza/djan-go/auth"
+	"github.com/Bokitza/djan-go/importexport"
+	"github.com/Bokitza/djan-go/models"
+	"github.com/Bokitza/djan-go/query"
 )
 
 //go:embed templates/*.html

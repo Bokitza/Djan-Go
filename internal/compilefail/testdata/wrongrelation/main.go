@@ -1,8 +1,8 @@
 package main
 
 import (
-	"github.com/yoav-rogat/djan-go/models"
-	"github.com/yoav-rogat/djan-go/query"
+	"github.com/Bokitza/djan-go/models"
+	"github.com/Bokitza/djan-go/query"
 )
 
 type Author struct {

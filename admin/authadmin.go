@@ -6,9 +6,9 @@ import (
 	"slices"
 	"strconv"
 
-	"github.com/yoav-rogat/djan-go/auth"
-	"github.com/yoav-rogat/djan-go/models"
-	"github.com/yoav-rogat/djan-go/query"
+	"github.com/Bokitza/djan-go/auth"
+	"github.com/Bokitza/djan-go/models"
+	"github.com/Bokitza/djan-go/query"
 )
 
 // extraField is a form section that is not a model column (passwords, many-to-many links).

@@ -16,14 +16,14 @@ import (
 	"testing"
 	"time"
 
+	"github.com/Bokitza/djan-go/db"
+	"github.com/Bokitza/djan-go/migrations"
+	"github.com/Bokitza/djan-go/models"
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/testcontainers/testcontainers-go"
 	postgrescontainer "github.com/testcontainers/testcontainers-go/modules/postgres"
 	"github.com/testcontainers/testcontainers-go/wait"
-	"github.com/yoav-rogat/djan-go/db"
-	"github.com/yoav-rogat/djan-go/migrations"
-	"github.com/yoav-rogat/djan-go/models"
 )
 
 var (

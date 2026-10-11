@@ -3,7 +3,7 @@ package migrations
 import (
 	"sort"
 
-	"github.com/yoav-rogat/djan-go/models"
+	"github.com/Bokitza/djan-go/models"
 )
 
 // TargetState builds the state declared by the given models.

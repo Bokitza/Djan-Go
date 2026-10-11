@@ -5,7 +5,7 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/yoav-rogat/djan-go/query"
+	"github.com/Bokitza/djan-go/query"
 )
 
 type publishedPost struct {

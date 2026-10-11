@@ -13,7 +13,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/yoav-rogat/djan-go/models"
+	"github.com/Bokitza/djan-go/models"
 )
 
 // Migration is the content of one migration file.

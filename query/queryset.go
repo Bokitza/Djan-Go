@@ -6,7 +6,7 @@ import (
 	"iter"
 	"reflect"
 
-	"github.com/yoav-rogat/djan-go/models"
+	"github.com/Bokitza/djan-go/models"
 )
 
 // QuerySet is a lazy, immutable query over model T. Every method returns a new QuerySet.

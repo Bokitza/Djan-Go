@@ -10,9 +10,9 @@ import (
 	"time"
 	"unicode/utf8"
 
+	"github.com/Bokitza/djan-go/models"
+	"github.com/Bokitza/djan-go/query"
 	"github.com/shopspring/decimal"
-	"github.com/yoav-rogat/djan-go/models"
-	"github.com/yoav-rogat/djan-go/query"
 )
 
 // cell is a rendered value in lists and read-only form fields.

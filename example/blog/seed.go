@@ -5,10 +5,10 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/yoav-rogat/djan-go/auth"
-	"github.com/yoav-rogat/djan-go/db"
-	"github.com/yoav-rogat/djan-go/models"
-	"github.com/yoav-rogat/djan-go/query"
+	"github.com/Bokitza/djan-go/auth"
+	"github.com/Bokitza/djan-go/db"
+	"github.com/Bokitza/djan-go/models"
+	"github.com/Bokitza/djan-go/query"
 )
 
 // EditorPermissions are granted to the "Editors" group created by Seed.

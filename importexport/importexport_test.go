@@ -9,10 +9,10 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/yoav-rogat/djan-go/importexport"
-	"github.com/yoav-rogat/djan-go/testdb"
-	"github.com/yoav-rogat/djan-go/models"
-	"github.com/yoav-rogat/djan-go/query"
+	"github.com/Bokitza/djan-go/importexport"
+	"github.com/Bokitza/djan-go/models"
+	"github.com/Bokitza/djan-go/query"
+	"github.com/Bokitza/djan-go/testdb"
 )
 
 type Publisher struct {

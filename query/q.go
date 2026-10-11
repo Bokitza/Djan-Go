@@ -6,7 +6,7 @@ import (
 	"sort"
 	"strings"
 
-	"github.com/yoav-rogat/djan-go/models"
+	"github.com/Bokitza/djan-go/models"
 )
 
 // Q is the string-based fallback for dynamic filters, e.g. Q{"author__name__icontains": "yo"}.

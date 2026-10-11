@@ -14,9 +14,9 @@ import (
 	"strings"
 	"time"
 
-	"github.com/yoav-rogat/djan-go/importexport"
-	"github.com/yoav-rogat/djan-go/models"
-	"github.com/yoav-rogat/djan-go/query"
+	"github.com/Bokitza/djan-go/importexport"
+	"github.com/Bokitza/djan-go/models"
+	"github.com/Bokitza/djan-go/query"
 )
 
 // ImportExport is the import and export policy of a model, like django-import-export's

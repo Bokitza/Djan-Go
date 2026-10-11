@@ -7,9 +7,9 @@ import (
 	"sync"
 	"time"
 
+	"github.com/Bokitza/djan-go/db"
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
-	"github.com/yoav-rogat/djan-go/db"
 )
 
 const advisoryLockKey = 7_316_204_801

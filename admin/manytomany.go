@@ -4,8 +4,8 @@ import (
 	"net/url"
 	"strconv"
 
-	"github.com/yoav-rogat/djan-go/models"
-	"github.com/yoav-rogat/djan-go/query"
+	"github.com/Bokitza/djan-go/models"
+	"github.com/Bokitza/djan-go/query"
 )
 
 // ManyToManyField edits the links between a model and a related model that are stored in a join

@@ -14,8 +14,8 @@ import (
 	"unicode/utf8"
 	"unsafe"
 
-	"github.com/yoav-rogat/djan-go/models"
-	"github.com/yoav-rogat/djan-go/query"
+	"github.com/Bokitza/djan-go/models"
+	"github.com/Bokitza/djan-go/query"
 )
 
 // Widget converts between a field value and the text of a dataset cell.

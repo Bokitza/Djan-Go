@@ -6,8 +6,8 @@ import (
 	"regexp"
 	"strings"
 
-	"github.com/yoav-rogat/djan-go/models"
-	"github.com/yoav-rogat/djan-go/query"
+	"github.com/Bokitza/djan-go/models"
+	"github.com/Bokitza/djan-go/query"
 )
 
 var usernamePattern = regexp.MustCompile(`^[\w.@+-]+$`)

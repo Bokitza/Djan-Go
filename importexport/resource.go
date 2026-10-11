@@ -30,8 +30,8 @@ import (
 	"strings"
 	"unsafe"
 
-	"github.com/yoav-rogat/djan-go/models"
-	"github.com/yoav-rogat/djan-go/query"
+	"github.com/Bokitza/djan-go/models"
+	"github.com/Bokitza/djan-go/query"
 )
 
 // Resource maps model T to dataset columns and back.

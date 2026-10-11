@@ -1,6 +1,6 @@
 # djan-go
 
-[![CI](https://github.com/yoav-rogat/djan-go/actions/workflows/ci.yml/badge.svg)](https://github.com/yoav-rogat/djan-go/actions/workflows/ci.yml)
+[![CI](https://github.com/Bokitza/djan-go/actions/workflows/ci.yml/badge.svg)](https://github.com/Bokitza/djan-go/actions/workflows/ci.yml)
 
 > [!WARNING]
 > **This project is a work in progress.** APIs change without notice, features are missing,

@@ -3,10 +3,10 @@ package blog_test
 import (
 	"testing"
 
-	"github.com/yoav-rogat/djan-go/admin"
-	"github.com/yoav-rogat/djan-go/example/blog"
-	"github.com/yoav-rogat/djan-go/migrations"
-	"github.com/yoav-rogat/djan-go/models"
+	"github.com/Bokitza/djan-go/admin"
+	"github.com/Bokitza/djan-go/example/blog"
+	"github.com/Bokitza/djan-go/migrations"
+	"github.com/Bokitza/djan-go/models"
 )
 
 func TestModelsAndAdminAreValid(t *testing.T) {

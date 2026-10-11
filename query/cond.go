@@ -7,8 +7,8 @@ import (
 	"time"
 	"unsafe"
 
+	"github.com/Bokitza/djan-go/models"
 	"github.com/shopspring/decimal"
-	"github.com/yoav-rogat/djan-go/models"
 )
 
 // Cond is a filter condition. Build conditions with the typed lookups (Eq, Gt, IContains, ...),
