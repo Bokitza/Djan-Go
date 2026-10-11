@@ -1,7 +1,7 @@
 {{define "content"}}
 <div class="mb-8">
-  <h1 class="text-2xl font-semibold tracking-tight">Welcome back{{if .User.FirstName}}, {{.User.FirstName}}{{end}}</h1>
-  <p class="mt-1 text-sm text-zinc-500 dark:text-zinc-400">Here is everything you can manage in {{.SiteTitle}}. Press <kbd class="kbd">⌘K</kbd> to jump anywhere.</p>
+  <h1 class="text-2xl font-semibold tracking-tight">{{if .User.FirstName}}{{tf "Welcome back, %s" .User.FirstName}}{{else}}{{t "Welcome back"}}{{end}}</h1>
+  <p class="mt-1 text-sm text-zinc-500 dark:text-zinc-400">{{tf "Here is everything you can manage in %s." .SiteTitle}} {{t "Press"}} <kbd class="kbd">⌘K</kbd> {{t "to jump anywhere."}}</p>
 </div>
 
 {{range .Page.Groups}}
@@ -13,15 +13,15 @@
       <div class="flex items-start justify-between">
         <span class="grid size-10 place-items-center rounded-xl bg-indigo-50 text-indigo-600 ring-1 ring-indigo-100 dark:bg-indigo-500/10 dark:text-indigo-300 dark:ring-indigo-500/20">{{icon .Meta.Icon "size-5"}}</span>
         {{if .Meta.AddURL}}
-        <a href="{{.Meta.AddURL}}" class="relative z-10 button button-ghost px-2 py-1 text-xs">{{icon "plus" "size-3.5"}} Add</a>
+        <a href="{{.Meta.AddURL}}" class="relative z-10 button button-ghost px-2 py-1 text-xs">{{icon "plus" "size-3.5"}} {{t "Add"}}</a>
         {{end}}
       </div>
       <p class="mt-4 text-3xl font-semibold tracking-tight tabular-nums">{{.Count}}</p>
       <a href="{{.Meta.URL}}" class="mt-1 flex items-center gap-1 text-sm font-medium text-zinc-600 dark:text-zinc-300">
         <span class="absolute inset-0"></span>{{.Meta.Plural}}
-        <span class="text-zinc-400 transition group-hover:translate-x-0.5">{{icon "arrow-right" "size-3.5"}}</span>
+        <span class="text-zinc-400 transition group-hover:translate-x-0.5 rtl:group-hover:-translate-x-0.5">{{icon "arrow-right" "size-3.5 shrink-0 rtl:rotate-180"}}</span>
       </a>
-      {{if and .Meta.Permissions.View (not .Meta.Permissions.Change)}}<span class="mt-3 inline-flex w-fit items-center gap-1 rounded-md bg-zinc-100 px-2 py-0.5 text-xs text-zinc-500 dark:bg-zinc-800">{{icon "eye" "size-3"}} View only</span>{{end}}
+      {{if and .Meta.Permissions.View (not .Meta.Permissions.Change)}}<span class="mt-3 inline-flex w-fit items-center gap-1 rounded-md bg-zinc-100 px-2 py-0.5 text-xs text-zinc-500 dark:bg-zinc-800">{{icon "eye" "size-3"}} {{t "View only"}}</span>{{end}}
     </div>
     {{end}}
   </div>
@@ -29,8 +29,8 @@
 {{else}}
 <div class="card grid place-items-center px-6 py-16 text-center">
   <span class="text-zinc-300 dark:text-zinc-600">{{icon "inbox" "size-10"}}</span>
-  <p class="mt-4 font-medium">Nothing to manage yet</p>
-  <p class="mt-1 text-sm text-zinc-500">You don't have permission to view any models. Ask a superuser for access.</p>
+  <p class="mt-4 font-medium">{{t "Nothing to manage yet"}}</p>
+  <p class="mt-1 text-sm text-zinc-500">{{t "You don't have permission to view any models. Ask a superuser for access."}}</p>
 </div>
 {{end}}
 {{end}}

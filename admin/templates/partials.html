@@ -1,9 +1,10 @@
 {{define "cell"}}
 {{- if eq .Kind "null"}}<span class="text-zinc-300 dark:text-zinc-600">—</span>
-{{- else if eq .Kind "bool"}}{{if .Bool}}<span class="inline-flex text-emerald-500" title="Yes">{{icon "circle-check"}}</span>{{else}}<span class="inline-flex text-zinc-300 dark:text-zinc-600" title="No">{{icon "circle-x"}}</span>{{end}}
+{{- else if eq .Kind "bool"}}{{if .Bool}}<span class="inline-flex text-emerald-500" title="{{t "Yes"}}">{{icon "circle-check"}}</span>{{else}}<span class="inline-flex text-zinc-300 dark:text-zinc-600" title="{{t "No"}}">{{icon "circle-x"}}</span>{{end}}
 {{- else if eq .Kind "link"}}{{if .URL}}<a href="{{.URL}}" title="{{.Full}}" class="font-medium text-indigo-600 hover:text-indigo-500 hover:underline dark:text-indigo-400">{{.Text}}</a>{{else}}<span title="{{.Full}}">{{.Text}}</span>{{end}}
 {{- else if eq .Kind "choice"}}<span class="inline-flex items-center rounded-md bg-zinc-100 px-2 py-0.5 text-xs font-medium text-zinc-700 ring-1 ring-zinc-200 ring-inset dark:bg-zinc-800 dark:text-zinc-300 dark:ring-zinc-700">{{.Text}}</span>
 {{- else if eq .Kind "json"}}<code class="font-mono text-xs text-zinc-500" title="{{.Full}}">{{.Text}}</code>
+{{- else if eq .Kind "number"}}<span class="whitespace-nowrap tabular-nums" dir="ltr">{{.Text}}</span>
 {{- else if eq .Kind "datetime"}}<span class="whitespace-nowrap tabular-nums text-zinc-500 dark:text-zinc-400" title="{{.Full}}">{{.Text}}</span>
 {{- else}}<span title="{{.Full}}">{{.Text}}</span>{{end}}
 {{- end}}
@@ -32,7 +33,7 @@
       <div class="flex items-center gap-3 border-b border-zinc-100 px-4 dark:border-zinc-800">
         <span class="text-zinc-400">{{icon "search" "size-5"}}</span>
         <input x-ref="input" x-model="search" @input="active = 0" @keydown.arrow-down.prevent="move(1)" @keydown.arrow-up.prevent="move(-1)" @keydown.enter.prevent="run()"
-               type="text" placeholder="Jump to a model, add an object…" class="h-14 w-full border-0 bg-transparent text-sm outline-none placeholder:text-zinc-400 focus:ring-0">
+               type="text" placeholder="{{t "Jump to a model, add an object…"}}" class="h-14 w-full border-0 bg-transparent text-sm outline-none placeholder:text-zinc-400 focus:ring-0">
         <kbd class="kbd">esc</kbd>
       </div>
       <ul x-ref="list" class="max-h-80 overflow-y-auto p-2">
@@ -45,7 +46,7 @@
             <span class="text-xs text-zinc-400" x-text="item.hint"></span>
           </li>
         </template>
-        <li x-show="results.length === 0" class="px-3 py-8 text-center text-sm text-zinc-500">No results</li>
+        <li x-show="results.length === 0" class="px-3 py-8 text-center text-sm text-zinc-500">{{t "No results"}}</li>
       </ul>
     </div>
   </div>
@@ -66,7 +67,7 @@
       </div>
     </div>
     <div class="mt-6 flex justify-end gap-2">
-      <button type="button" class="button button-secondary" @click="$store.confirm.open = false">Cancel</button>
+      <button type="button" class="button button-secondary" @click="$store.confirm.open = false">{{t "Cancel"}}</button>
       <button type="submit" class="button button-danger" x-text="$store.confirm.button"></button>
     </div>
   </form>

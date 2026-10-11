@@ -7,6 +7,7 @@ import (
 	"time"
 	"unsafe"
 
+	"github.com/shopspring/decimal"
 	"github.com/yoav/djan-go/models"
 )
 
@@ -64,7 +65,7 @@ func lookup[V any](field *V, operator string, values ...any) Cond {
 
 // Ordered are the types usable with Gt, Gte, Lt, Lte and Between.
 type Ordered interface {
-	cmp.Ordered | time.Time
+	cmp.Ordered | time.Time | decimal.Decimal
 }
 
 // Eq matches rows where the field equals value. A nil pointer value matches NULL.

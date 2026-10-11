@@ -39,11 +39,17 @@ type ModelAdmin[T any] struct {
 	DeleteQuerySet RuleFunc[T]
 	// CanAdd decides whether the request may create objects (in addition to the add permission).
 	CanAdd func(r *Request) bool
+	// Permissions overrides what the model permissions grant, e.g. to let every member view a model.
+	// Row rules (the QuerySet functions) still apply on top of it.
+	Permissions func(r *Request, granted Permissions) Permissions
 
 	// BeforeSave runs after form validation and before the object is saved.
 	BeforeSave func(r *Request, object *T, isNew bool) error
 	// AfterSave runs after the object was saved, in the same transaction.
 	AfterSave func(r *Request, object *T, isNew bool) error
+
+	// ManyToMany adds checkbox editors for links stored in join models (see admin.ManyToMany).
+	ManyToMany []ManyToManyField[T]
 
 	extras []extraField
 }
@@ -82,9 +88,24 @@ type Config struct {
 	searchFields []Field
 	listFilter   []Field
 	readonly     []Field
+	readonlyWhen []conditionalReadonly
 	exclude      []Field
 	perPage      int
 	ordering     []models.OrderTerm
+}
+
+type conditionalReadonly struct {
+	condition func(r *Request, object any) bool
+	fields    []Field
+}
+
+// ReadonlyWhen makes fields read-only on the form while condition holds. It is checked against
+// the object as stored, before the submitted form is applied.
+func ReadonlyWhen[T any](config *Config, condition func(r *Request, object *T) bool, fields ...Field) {
+	config.readonlyWhen = append(config.readonlyWhen, conditionalReadonly{
+		condition: func(r *Request, object any) bool { return condition(r, object.(*T)) },
+		fields:    fields,
+	})
 }
 
 // ListDisplay sets the list columns. The first column links to the change page.
@@ -131,6 +152,7 @@ type resolvedConfig struct {
 	searchFields []*models.Field
 	filters      []*models.Field
 	readonly     map[*models.Field]bool
+	readonlyWhen []resolvedReadonly
 	exclude      map[*models.Field]bool
 	perPage      int
 	ordering     []string
@@ -212,6 +234,15 @@ func resolveConfig(info *models.ModelInfo, config *Config) (*resolvedConfig, []e
 			resolved.readonly[final] = true
 		}
 	}
+	for _, conditional := range config.readonlyWhen {
+		resolvedConditional := resolvedReadonly{condition: conditional.condition, fields: map[*models.Field]bool{}}
+		for _, field := range conditional.fields {
+			if final := local("ReadonlyWhen", field); final != nil {
+				resolvedConditional.fields[final] = true
+			}
+		}
+		resolved.readonlyWhen = append(resolved.readonlyWhen, resolvedConditional)
+	}
 	for _, field := range config.exclude {
 		if final := local("Exclude", field); final != nil {
 			resolved.exclude[final] = true
@@ -251,4 +282,22 @@ func lowerFirst(value string) string {
 		return value
 	}
 	return strings.ToLower(value[:1]) + value[1:]
+}
+
+type resolvedReadonly struct {
+	condition func(r *Request, object any) bool
+	fields    map[*models.Field]bool
+}
+
+// lockedFields returns the fields made read-only by ReadonlyWhen for this request and object.
+func (c *resolvedConfig) lockedFields(r *Request, object any) map[*models.Field]bool {
+	locked := map[*models.Field]bool{}
+	for _, conditional := range c.readonlyWhen {
+		if conditional.condition(r, object) {
+			for field := range conditional.fields {
+				locked[field] = true
+			}
+		}
+	}
+	return locked
 }

@@ -44,6 +44,8 @@ type App struct {
 	Routes func(mux *http.ServeMux)
 	// Commands adds project commands. They run with the default database connected.
 	Commands []Command
+	// Middleware wraps every request after the session user is loaded (auth.CurrentUser works). Optional.
+	Middleware func(http.Handler) http.Handler
 
 	Stdout io.Writer
 	Stderr io.Writer
@@ -397,6 +399,9 @@ func (app *App) Handler() http.Handler {
 		app.Routes(mux)
 	} else if app.Admin != nil {
 		mux.Handle("GET /{$}", http.RedirectHandler(strings.TrimSuffix(app.Admin.Prefix, "/")+"/", http.StatusFound))
+	}
+	if app.Middleware != nil {
+		return auth.Middleware(app.Middleware(mux))
 	}
 	return auth.Middleware(mux)
 }

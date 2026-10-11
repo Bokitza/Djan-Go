@@ -4,8 +4,8 @@
   <div class="relative w-full max-w-sm">
     <div class="mb-8 flex flex-col items-center text-center">
       <span class="grid size-12 place-items-center rounded-2xl bg-gradient-to-br from-indigo-500 to-violet-600 text-lg font-bold text-white shadow-lg shadow-indigo-500/30">dj</span>
-      <h1 class="mt-6 text-2xl font-semibold tracking-tight">Sign in to {{.SiteTitle}}</h1>
-      <p class="mt-1 text-sm text-zinc-500 dark:text-zinc-400">Staff accounts only</p>
+      <h1 class="mt-6 text-2xl font-semibold tracking-tight">{{tf "Sign in to %s" .SiteTitle}}</h1>
+      <p class="mt-1 text-sm text-zinc-500 dark:text-zinc-400">{{t "Staff accounts only"}}</p>
     </div>
     <form method="post" action="{{.Prefix}}/login/" class="card space-y-5 p-6">
       <input type="hidden" name="next" value="{{.Page.Next}}">
@@ -13,14 +13,14 @@
       <div class="flex gap-2 rounded-lg bg-rose-50 p-3 text-sm text-rose-700 ring-1 ring-rose-200 dark:bg-rose-500/10 dark:text-rose-300 dark:ring-rose-500/20">{{icon "alert"}}<p>{{.Page.Error}}</p></div>
       {{end}}
       <div>
-        <label for="username" class="mb-1.5 block text-sm font-medium">Username</label>
+        <label for="username" class="mb-1.5 block text-sm font-medium">{{t "Username"}}</label>
         <input id="username" name="username" value="{{.Page.Username}}" autocomplete="username" autofocus required class="input">
       </div>
       <div>
-        <label for="password" class="mb-1.5 block text-sm font-medium">Password</label>
+        <label for="password" class="mb-1.5 block text-sm font-medium">{{t "Password"}}</label>
         <input id="password" name="password" type="password" autocomplete="current-password" required class="input">
       </div>
-      <button type="submit" class="button button-primary w-full py-2.5">Sign in {{icon "arrow-right"}}</button>
+      <button type="submit" class="button button-primary w-full py-2.5">{{t "Sign in"}} {{icon "arrow-right" "size-4 shrink-0 rtl:rotate-180"}}</button>
     </form>
     <p class="mt-6 text-center text-xs text-zinc-400">Powered by djan-go</p>
   </div>

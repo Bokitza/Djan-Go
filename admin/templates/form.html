@@ -3,10 +3,10 @@
 <div class="mb-6 flex flex-wrap items-center gap-4">
   <span class="grid size-11 place-items-center rounded-xl bg-indigo-50 text-indigo-600 ring-1 ring-indigo-100 dark:bg-indigo-500/10 dark:text-indigo-300 dark:ring-indigo-500/20">{{icon $page.Meta.Icon "size-5"}}</span>
   <div class="min-w-0 flex-1">
-    <p class="text-xs font-medium tracking-wide text-zinc-500 uppercase">{{if $page.IsNew}}New {{$page.Meta.Label}}{{else}}{{$page.Meta.Label}} #{{$page.ID}}{{end}}</p>
-    <h1 class="truncate text-2xl font-semibold tracking-tight">{{if $page.IsNew}}Add {{$page.Meta.Label}}{{else}}{{$page.ObjectLabel}}{{end}}</h1>
+    <p class="text-xs font-medium tracking-wide text-zinc-500 uppercase">{{if $page.IsNew}}{{tf "New %s" $page.Meta.Label}}{{else}}{{$page.Meta.Label}} #{{$page.ID}}{{end}}</p>
+    <h1 class="truncate text-2xl font-semibold tracking-tight">{{if $page.IsNew}}{{tf "Add %s" $page.Meta.Label}}{{else}}{{$page.ObjectLabel}}{{end}}</h1>
   </div>
-  {{if not $page.Editable}}<span class="inline-flex items-center gap-1.5 rounded-full bg-amber-50 px-3 py-1 text-xs font-medium text-amber-700 ring-1 ring-amber-200 dark:bg-amber-500/10 dark:text-amber-300 dark:ring-amber-500/20">{{icon "lock" "size-3.5"}} Read only</span>{{end}}
+  {{if not $page.Editable}}<span class="inline-flex items-center gap-1.5 rounded-full bg-amber-50 px-3 py-1 text-xs font-medium text-amber-700 ring-1 ring-amber-200 dark:bg-amber-500/10 dark:text-amber-300 dark:ring-amber-500/20">{{icon "lock" "size-3.5"}} {{t "Read only"}}</span>{{end}}
 </div>
 
 <div class="grid gap-6 lg:grid-cols-3">
@@ -30,12 +30,12 @@
 
       {{if $page.Editable}}
       <div class="sticky bottom-0 flex flex-wrap items-center justify-end gap-2 rounded-b-2xl bg-white/90 px-6 py-4 backdrop-blur dark:bg-zinc-900/90">
-        <a href="{{$page.Meta.URL}}" class="button button-ghost mr-auto">Cancel</a>
-        {{if $page.Meta.AddURL}}<button type="submit" name="_action" value="another" class="button button-secondary">Save and add another</button>{{end}}
-        <button type="submit" name="_action" value="continue" class="button button-secondary">Save and continue</button>
+        <a href="{{$page.Meta.URL}}" class="button button-ghost me-auto">{{t "Cancel"}}</a>
+        {{if $page.Meta.AddURL}}<button type="submit" name="_action" value="another" class="button button-secondary">{{t "Save and add another"}}</button>{{end}}
+        <button type="submit" name="_action" value="continue" class="button button-secondary">{{t "Save and continue"}}</button>
         <button type="submit" name="_action" value="save" class="button button-primary">
-          <span class="htmx-indicator -ml-1 size-4 animate-spin rounded-full border-2 border-white/40 border-t-white"></span>
-          Save
+          <span class="htmx-indicator -ms-1 size-4 animate-spin rounded-full border-2 border-white/40 border-t-white"></span>
+          {{t "Save"}}
         </button>
       </div>
       {{end}}
@@ -45,28 +45,28 @@
   <aside class="space-y-6">
     {{if not $page.IsNew}}
     <div class="card p-6">
-      <h2 class="text-sm font-semibold">Details</h2>
+      <h2 class="text-sm font-semibold">{{t "Details"}}</h2>
       <dl class="mt-4 space-y-3 text-sm">
-        <div class="flex justify-between gap-4"><dt class="text-zinc-500">ID</dt><dd class="font-mono tabular-nums">{{$page.ID}}</dd></div>
-        <div class="flex justify-between gap-4"><dt class="text-zinc-500">Created</dt><dd class="tabular-nums">{{$page.CreatedAt}}</dd></div>
-        <div class="flex justify-between gap-4"><dt class="text-zinc-500">Updated</dt><dd class="tabular-nums">{{$page.UpdatedAt}}</dd></div>
+        <div class="flex justify-between gap-4"><dt class="text-zinc-500">{{t "ID"}}</dt><dd class="font-mono tabular-nums">{{$page.ID}}</dd></div>
+        <div class="flex justify-between gap-4"><dt class="text-zinc-500">{{t "Created"}}</dt><dd class="tabular-nums">{{$page.CreatedAt}}</dd></div>
+        <div class="flex justify-between gap-4"><dt class="text-zinc-500">{{t "Updated"}}</dt><dd class="tabular-nums">{{$page.UpdatedAt}}</dd></div>
       </dl>
       {{if $page.ReadOnlyNotes}}<p class="mt-4 rounded-lg bg-zinc-50 p-3 text-xs text-zinc-500 dark:bg-zinc-800/60">{{$page.ReadOnlyNotes}}</p>{{end}}
     </div>
     {{if $page.CanDelete}}
     <div class="card p-6 ring-rose-200/60 dark:ring-rose-500/20">
-      <h2 class="text-sm font-semibold text-rose-600 dark:text-rose-400">Danger zone</h2>
-      <p class="mt-1 text-sm text-zinc-500">Deleting this {{$page.Meta.Label}} cannot be undone.</p>
-      <button type="button" class="button button-danger mt-4 w-full" data-action="{{$page.DeleteURL}}" data-label="{{$page.ObjectLabel}}"
-              @click="$store.confirm.ask({title: 'Delete “' + $el.dataset.label + '”?', message: 'This cannot be undone.', action: $el.dataset.action})">
-        {{icon "trash"}} Delete {{$page.Meta.Label}}
+      <h2 class="text-sm font-semibold text-rose-600 dark:text-rose-400">{{t "Danger zone"}}</h2>
+      <p class="mt-1 text-sm text-zinc-500">{{tf "Deleting this %s cannot be undone." $page.Meta.Label}}</p>
+      <button type="button" class="button button-danger mt-4 w-full" data-action="{{$page.DeleteURL}}" data-title="{{tf "Delete “%s”?" $page.ObjectLabel}}" data-message="{{t "This cannot be undone."}}"
+              @click="$store.confirm.ask({title: $el.dataset.title, message: $el.dataset.message, action: $el.dataset.action})">
+        {{icon "trash"}} {{tf "Delete %s" $page.Meta.Label}}
       </button>
     </div>
     {{end}}
     {{else}}
     <div class="card p-6 text-sm text-zinc-500">
-      <p class="flex items-center gap-2 font-medium text-zinc-900 dark:text-white">{{icon "info"}} New {{$page.Meta.Label}}</p>
-      <p class="mt-2">Fields marked with <span class="text-rose-500">*</span> are required.</p>
+      <p class="flex items-center gap-2 font-medium text-zinc-900 dark:text-white">{{icon "info"}} {{tf "New %s" $page.Meta.Label}}</p>
+      <p class="mt-2">{{t "Fields marked with * are required."}}</p>
     </div>
     {{end}}
   </aside>
@@ -110,7 +110,7 @@
 
   {{else if eq .Widget "select"}}
   {{template "label" .}}
-  <select id="field-{{.Name}}" name="{{.Name}}" class="input pr-8 {{if .Error}}input-error{{end}}">
+  <select id="field-{{.Name}}" name="{{.Name}}" class="input pe-8 {{if .Error}}input-error{{end}}">
     {{range .Choices}}<option value="{{.Value}}" {{if .Selected}}selected{{end}}>{{.Label}}</option>{{end}}
   </select>
   {{template "fieldFooter" .}}
@@ -120,9 +120,9 @@
   <div x-data="combobox({{json .Value}}, {{json .SelectedLabel}})" class="relative" @click.outside="open = false">
     <input type="hidden" name="{{.Name}}" :value="value">
     <button type="button" @click="open = !open; $nextTick(() => $refs.search.focus())"
-            class="input flex items-center justify-between text-left {{if .Error}}input-error{{end}}">
+            class="input flex items-center justify-between text-start {{if .Error}}input-error{{end}}">
       <span x-show="label" x-text="label" class="truncate"></span>
-      <span x-show="!label" class="text-zinc-400">Select…</span>
+      <span x-show="!label" class="text-zinc-400">{{t "Select…"}}</span>
       <span class="flex items-center gap-1 text-zinc-400">
         {{if .Nullable}}<span x-show="value" @click.stop="clear()" class="rounded p-0.5 hover:bg-zinc-100 hover:text-zinc-700 dark:hover:bg-zinc-800">{{icon "x" "size-3.5"}}</span>{{end}}
         {{icon "chevrons-sort" "size-3.5"}}
@@ -130,13 +130,13 @@
     </button>
     <div x-cloak x-show="open" x-transition.origin.top class="absolute z-20 mt-2 w-full rounded-xl bg-white p-1.5 shadow-lg ring-1 ring-zinc-950/10 dark:bg-zinc-900 dark:ring-white/10">
       <div class="relative mb-1">
-        <span class="pointer-events-none absolute inset-y-0 left-3 flex items-center text-zinc-400">{{icon "search" "size-3.5"}}</span>
-        <input x-ref="search" type="search" name="q" autocomplete="off" placeholder="Type to search…"
+        <span class="pointer-events-none absolute inset-y-0 start-3 flex items-center text-zinc-400">{{icon "search" "size-3.5"}}</span>
+        <input x-ref="search" type="search" name="q" autocomplete="off" placeholder="{{t "Type to search…"}}"
                hx-get="{{.AutocompleteURL}}" hx-trigger="focus once, input changed delay:200ms" hx-target="next [data-options]" hx-swap="innerHTML"
-               class="w-full rounded-lg border-0 bg-zinc-50 py-2 pr-3 pl-8 text-sm ring-0 outline-none focus:ring-2 focus:ring-indigo-500 dark:bg-zinc-800">
+               class="w-full rounded-lg border-0 bg-zinc-50 py-2 pe-3 ps-8 text-sm ring-0 outline-none focus:ring-2 focus:ring-indigo-500 dark:bg-zinc-800">
       </div>
       <div data-options class="max-h-60 overflow-y-auto">
-        <p class="px-3 py-6 text-center text-sm text-zinc-500">Loading…</p>
+        <p class="px-3 py-6 text-center text-sm text-zinc-500">{{t "Loading…"}}</p>
       </div>
     </div>
   </div>
@@ -155,7 +155,7 @@
 <div class="mb-3 flex items-center justify-between gap-3">
   <div>
     <h3 class="flex items-center gap-2 text-sm font-semibold">{{.Label}}{{if .Required}}<span class="text-rose-500">*</span>{{end}}
-      {{if eq .Widget "checkboxes"}}<span class="rounded-full bg-zinc-100 px-2 py-0.5 text-xs font-medium text-zinc-600 tabular-nums dark:bg-zinc-800 dark:text-zinc-300">{{.Count}} selected</span>{{end}}
+      {{if eq .Widget "checkboxes"}}<span class="rounded-full bg-zinc-100 px-2 py-0.5 text-xs font-medium text-zinc-600 tabular-nums dark:bg-zinc-800 dark:text-zinc-300">{{.Count}} {{t "selected"}}</span>{{end}}
     </h3>
     {{if .Help}}<p class="mt-0.5 text-xs text-zinc-500">{{.Help}}</p>{{end}}
   </div>
@@ -163,17 +163,17 @@
 {{if .Error}}<p class="mb-3 flex items-center gap-1 text-xs text-rose-600 dark:text-rose-400">{{icon "alert" "size-3.5"}} {{.Error}}</p>{{end}}
 
 {{if eq .Widget "password"}}
-  {{if .ReadOnly}}<p class="text-sm text-zinc-500">You can't change this password.</p>{{else}}
+  {{if .ReadOnly}}<p class="text-sm text-zinc-500">{{t "You can't change this password."}}</p>{{else}}
   <div class="grid gap-4 sm:grid-cols-2">
-    <input type="password" name="{{.Name}}" autocomplete="new-password" placeholder="New password" class="input {{if .Error}}input-error{{end}}">
-    <input type="password" name="{{.Name}}_confirm" autocomplete="new-password" placeholder="Confirm password" class="input {{if .Error}}input-error{{end}}">
+    <input type="password" name="{{.Name}}" autocomplete="new-password" placeholder="{{t "New password"}}" class="input {{if .Error}}input-error{{end}}">
+    <input type="password" name="{{.Name}}_confirm" autocomplete="new-password" placeholder="{{t "Confirm password"}}" class="input {{if .Error}}input-error{{end}}">
   </div>
   {{end}}
 {{else if eq .Widget "checkboxes"}}
   <div x-data="{ filter: '' }">
     <div class="relative mb-3">
-      <span class="pointer-events-none absolute inset-y-0 left-3 flex items-center text-zinc-400">{{icon "search" "size-3.5"}}</span>
-      <input type="search" x-model="filter" placeholder="Filter…" class="input py-1.5 pl-8 text-xs" form="none">
+      <span class="pointer-events-none absolute inset-y-0 start-3 flex items-center text-zinc-400">{{icon "search" "size-3.5"}}</span>
+      <input type="search" x-model="filter" placeholder="{{t "Filter…"}}" class="input py-1.5 ps-8 text-xs" form="none">
     </div>
     <div class="max-h-72 space-y-4 overflow-y-auto rounded-xl p-1 ring-1 ring-zinc-200 dark:ring-zinc-800">
       {{$name := .Name}}{{$readonly := .ReadOnly}}
@@ -192,7 +192,7 @@
         </div>
       </div>
       {{else}}
-      <p class="px-3 py-6 text-center text-sm text-zinc-500">Nothing to choose from yet.</p>
+      <p class="px-3 py-6 text-center text-sm text-zinc-500">{{t "Nothing to choose from yet."}}</p>
       {{end}}
     </div>
   </div>

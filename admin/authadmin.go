@@ -159,7 +159,7 @@ func permissionGroups(r *Request, checked map[int64]bool, submitted url.Values, 
 	var groups []extraOptionGroup
 	count := 0
 	for _, permission := range permissions {
-		label := titleCase(permission.App)
+		label := r.Site.appLabel(permission.App)
 		if len(groups) == 0 || groups[len(groups)-1].Label != label {
 			groups = append(groups, extraOptionGroup{Label: label})
 		}
