@@ -1,0 +1,28 @@
+{{define "content"}}
+<div class="relative flex min-h-screen items-center justify-center overflow-hidden px-4">
+  <div class="pointer-events-none absolute inset-0 bg-[radial-gradient(ellipse_at_top,rgba(99,102,241,0.18),transparent_60%)] dark:bg-[radial-gradient(ellipse_at_top,rgba(99,102,241,0.25),transparent_60%)]"></div>
+  <div class="relative w-full max-w-sm">
+    <div class="mb-8 flex flex-col items-center text-center">
+      <img src="{{.Logo}}" alt="" class="size-16 object-contain">
+      <h1 class="mt-6 text-2xl font-semibold tracking-tight">{{tf "Sign in to %s" .SiteTitle}}</h1>
+      <p class="mt-1 text-sm text-zinc-500 dark:text-zinc-400">{{t "Staff accounts only"}}</p>
+    </div>
+    <form method="post" action="{{.Prefix}}/login/" class="card space-y-5 p-6">
+      <input type="hidden" name="next" value="{{.Page.Next}}">
+      {{if .Page.Error}}
+      <div class="flex gap-2 rounded-lg bg-rose-50 p-3 text-sm text-rose-700 ring-1 ring-rose-200 dark:bg-rose-500/10 dark:text-rose-300 dark:ring-rose-500/20">{{icon "alert"}}<p>{{.Page.Error}}</p></div>
+      {{end}}
+      <div>
+        <label for="username" class="mb-1.5 block text-sm font-medium">{{t "Username"}}</label>
+        <input id="username" name="username" value="{{.Page.Username}}" autocomplete="username" autofocus required class="input">
+      </div>
+      <div>
+        <label for="password" class="mb-1.5 block text-sm font-medium">{{t "Password"}}</label>
+        <input id="password" name="password" type="password" autocomplete="current-password" required class="input">
+      </div>
+      <button type="submit" class="button button-primary w-full py-2.5">{{t "Sign in"}} {{icon "arrow-right" "size-4 shrink-0 rtl:rotate-180"}}</button>
+    </form>
+    <p class="mt-6 text-center text-xs text-zinc-400">Powered by djan-go</p>
+  </div>
+</div>
+{{end}}

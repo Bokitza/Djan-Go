@@ -1,0 +1,579 @@
+{
+  "name": "0001_initial",
+  "operations": [
+    {
+      "type": "create_table",
+      "table_state": {
+        "name": "auth_group",
+        "model": "auth.Group",
+        "columns": [
+          {
+            "name": "id",
+            "type": "bigint",
+            "primary_key": true
+          },
+          {
+            "name": "name",
+            "type": "varchar(150)"
+          },
+          {
+            "name": "created_at",
+            "type": "timestamptz",
+            "default": "now()"
+          },
+          {
+            "name": "updated_at",
+            "type": "timestamptz",
+            "default": "now()"
+          }
+        ]
+      }
+    },
+    {
+      "type": "create_table",
+      "table_state": {
+        "name": "auth_group_permissions",
+        "model": "auth.GroupPermission",
+        "columns": [
+          {
+            "name": "id",
+            "type": "bigint",
+            "primary_key": true
+          },
+          {
+            "name": "group_id",
+            "type": "bigint"
+          },
+          {
+            "name": "permission_id",
+            "type": "bigint"
+          },
+          {
+            "name": "created_at",
+            "type": "timestamptz",
+            "default": "now()"
+          },
+          {
+            "name": "updated_at",
+            "type": "timestamptz",
+            "default": "now()"
+          }
+        ]
+      }
+    },
+    {
+      "type": "create_table",
+      "table_state": {
+        "name": "auth_permission",
+        "model": "auth.Permission",
+        "columns": [
+          {
+            "name": "id",
+            "type": "bigint",
+            "primary_key": true
+          },
+          {
+            "name": "name",
+            "type": "varchar(255)"
+          },
+          {
+            "name": "app",
+            "type": "varchar(100)"
+          },
+          {
+            "name": "codename",
+            "type": "varchar(100)"
+          },
+          {
+            "name": "created_at",
+            "type": "timestamptz",
+            "default": "now()"
+          },
+          {
+            "name": "updated_at",
+            "type": "timestamptz",
+            "default": "now()"
+          }
+        ]
+      }
+    },
+    {
+      "type": "create_table",
+      "table_state": {
+        "name": "auth_session",
+        "model": "auth.Session",
+        "columns": [
+          {
+            "name": "id",
+            "type": "bigint",
+            "primary_key": true
+          },
+          {
+            "name": "key",
+            "type": "varchar(64)"
+          },
+          {
+            "name": "user_id",
+            "type": "bigint"
+          },
+          {
+            "name": "expires_at",
+            "type": "timestamptz"
+          },
+          {
+            "name": "created_at",
+            "type": "timestamptz",
+            "default": "now()"
+          },
+          {
+            "name": "updated_at",
+            "type": "timestamptz",
+            "default": "now()"
+          }
+        ]
+      }
+    },
+    {
+      "type": "create_table",
+      "table_state": {
+        "name": "auth_user",
+        "model": "auth.User",
+        "columns": [
+          {
+            "name": "id",
+            "type": "bigint",
+            "primary_key": true
+          },
+          {
+            "name": "username",
+            "type": "varchar(150)"
+          },
+          {
+            "name": "email",
+            "type": "varchar(254)"
+          },
+          {
+            "name": "first_name",
+            "type": "varchar(150)"
+          },
+          {
+            "name": "last_name",
+            "type": "varchar(150)"
+          },
+          {
+            "name": "password",
+            "type": "varchar(255)"
+          },
+          {
+            "name": "is_active",
+            "type": "boolean",
+            "default": "true"
+          },
+          {
+            "name": "is_staff",
+            "type": "boolean",
+            "default": "false"
+          },
+          {
+            "name": "is_superuser",
+            "type": "boolean",
+            "default": "false"
+          },
+          {
+            "name": "last_login",
+            "type": "timestamptz",
+            "nullable": true
+          },
+          {
+            "name": "created_at",
+            "type": "timestamptz",
+            "default": "now()"
+          },
+          {
+            "name": "updated_at",
+            "type": "timestamptz",
+            "default": "now()"
+          }
+        ]
+      }
+    },
+    {
+      "type": "create_table",
+      "table_state": {
+        "name": "auth_user_groups",
+        "model": "auth.UserGroup",
+        "columns": [
+          {
+            "name": "id",
+            "type": "bigint",
+            "primary_key": true
+          },
+          {
+            "name": "user_id",
+            "type": "bigint"
+          },
+          {
+            "name": "group_id",
+            "type": "bigint"
+          },
+          {
+            "name": "created_at",
+            "type": "timestamptz",
+            "default": "now()"
+          },
+          {
+            "name": "updated_at",
+            "type": "timestamptz",
+            "default": "now()"
+          }
+        ]
+      }
+    },
+    {
+      "type": "create_table",
+      "table_state": {
+        "name": "auth_user_permissions",
+        "model": "auth.UserPermission",
+        "columns": [
+          {
+            "name": "id",
+            "type": "bigint",
+            "primary_key": true
+          },
+          {
+            "name": "user_id",
+            "type": "bigint"
+          },
+          {
+            "name": "permission_id",
+            "type": "bigint"
+          },
+          {
+            "name": "created_at",
+            "type": "timestamptz",
+            "default": "now()"
+          },
+          {
+            "name": "updated_at",
+            "type": "timestamptz",
+            "default": "now()"
+          }
+        ]
+      }
+    },
+    {
+      "type": "add_index",
+      "table": "auth_group",
+      "index": {
+        "name": "auth_group_name_key",
+        "columns": [
+          "name"
+        ],
+        "unique": true
+      }
+    },
+    {
+      "type": "add_index",
+      "table": "auth_group_permissions",
+      "index": {
+        "name": "auth_group_permissions_group_id_idx",
+        "columns": [
+          "group_id"
+        ]
+      }
+    },
+    {
+      "type": "add_index",
+      "table": "auth_group_permissions",
+      "index": {
+        "name": "auth_group_permissions_permission_id_idx",
+        "columns": [
+          "permission_id"
+        ]
+      }
+    },
+    {
+      "type": "add_index",
+      "table": "auth_group_permissions",
+      "index": {
+        "name": "auth_group_permissions_group_id_permission_id_uniq",
+        "columns": [
+          "group_id",
+          "permission_id"
+        ],
+        "unique": true
+      }
+    },
+    {
+      "type": "add_index",
+      "table": "auth_permission",
+      "index": {
+        "name": "auth_permission_app_codename_uniq",
+        "columns": [
+          "app",
+          "codename"
+        ],
+        "unique": true
+      }
+    },
+    {
+      "type": "add_index",
+      "table": "auth_session",
+      "index": {
+        "name": "auth_session_key_key",
+        "columns": [
+          "key"
+        ],
+        "unique": true
+      }
+    },
+    {
+      "type": "add_index",
+      "table": "auth_session",
+      "index": {
+        "name": "auth_session_user_id_idx",
+        "columns": [
+          "user_id"
+        ]
+      }
+    },
+    {
+      "type": "add_index",
+      "table": "auth_session",
+      "index": {
+        "name": "auth_session_expires_at_idx",
+        "columns": [
+          "expires_at"
+        ]
+      }
+    },
+    {
+      "type": "add_index",
+      "table": "auth_user",
+      "index": {
+        "name": "auth_user_username_key",
+        "columns": [
+          "username"
+        ],
+        "unique": true
+      }
+    },
+    {
+      "type": "add_index",
+      "table": "auth_user_groups",
+      "index": {
+        "name": "auth_user_groups_user_id_idx",
+        "columns": [
+          "user_id"
+        ]
+      }
+    },
+    {
+      "type": "add_index",
+      "table": "auth_user_groups",
+      "index": {
+        "name": "auth_user_groups_group_id_idx",
+        "columns": [
+          "group_id"
+        ]
+      }
+    },
+    {
+      "type": "add_index",
+      "table": "auth_user_groups",
+      "index": {
+        "name": "auth_user_groups_user_id_group_id_uniq",
+        "columns": [
+          "user_id",
+          "group_id"
+        ],
+        "unique": true
+      }
+    },
+    {
+      "type": "add_index",
+      "table": "auth_user_permissions",
+      "index": {
+        "name": "auth_user_permissions_user_id_idx",
+        "columns": [
+          "user_id"
+        ]
+      }
+    },
+    {
+      "type": "add_index",
+      "table": "auth_user_permissions",
+      "index": {
+        "name": "auth_user_permissions_permission_id_idx",
+        "columns": [
+          "permission_id"
+        ]
+      }
+    },
+    {
+      "type": "add_index",
+      "table": "auth_user_permissions",
+      "index": {
+        "name": "auth_user_permissions_user_id_permission_id_uniq",
+        "columns": [
+          "user_id",
+          "permission_id"
+        ],
+        "unique": true
+      }
+    },
+    {
+      "type": "add_foreign_key",
+      "table": "auth_group_permissions",
+      "column": {
+        "name": "group_id",
+        "type": "bigint",
+        "foreign_key": {
+          "table": "auth_group",
+          "column": "id",
+          "on_delete": "CASCADE"
+        }
+      }
+    },
+    {
+      "type": "add_foreign_key",
+      "table": "auth_group_permissions",
+      "column": {
+        "name": "permission_id",
+        "type": "bigint",
+        "foreign_key": {
+          "table": "auth_permission",
+          "column": "id",
+          "on_delete": "CASCADE"
+        }
+      }
+    },
+    {
+      "type": "add_foreign_key",
+      "table": "auth_session",
+      "column": {
+        "name": "user_id",
+        "type": "bigint",
+        "foreign_key": {
+          "table": "auth_user",
+          "column": "id",
+          "on_delete": "CASCADE"
+        }
+      }
+    },
+    {
+      "type": "add_foreign_key",
+      "table": "auth_user_groups",
+      "column": {
+        "name": "user_id",
+        "type": "bigint",
+        "foreign_key": {
+          "table": "auth_user",
+          "column": "id",
+          "on_delete": "CASCADE"
+        }
+      }
+    },
+    {
+      "type": "add_foreign_key",
+      "table": "auth_user_groups",
+      "column": {
+        "name": "group_id",
+        "type": "bigint",
+        "foreign_key": {
+          "table": "auth_group",
+          "column": "id",
+          "on_delete": "CASCADE"
+        }
+      }
+    },
+    {
+      "type": "add_foreign_key",
+      "table": "auth_user_permissions",
+      "column": {
+        "name": "user_id",
+        "type": "bigint",
+        "foreign_key": {
+          "table": "auth_user",
+          "column": "id",
+          "on_delete": "CASCADE"
+        }
+      }
+    },
+    {
+      "type": "add_foreign_key",
+      "table": "auth_user_permissions",
+      "column": {
+        "name": "permission_id",
+        "type": "bigint",
+        "foreign_key": {
+          "table": "auth_permission",
+          "column": "id",
+          "on_delete": "CASCADE"
+        }
+      }
+    }
+  ],
+  "up": [
+    "CREATE TABLE \"auth_group\" (\n    \"id\" bigint GENERATED BY DEFAULT AS IDENTITY PRIMARY KEY,\n    \"name\" varchar(150) NOT NULL,\n    \"created_at\" timestamptz NOT NULL DEFAULT now(),\n    \"updated_at\" timestamptz NOT NULL DEFAULT now()\n)",
+    "CREATE TABLE \"auth_group_permissions\" (\n    \"id\" bigint GENERATED BY DEFAULT AS IDENTITY PRIMARY KEY,\n    \"group_id\" bigint NOT NULL,\n    \"permission_id\" bigint NOT NULL,\n    \"created_at\" timestamptz NOT NULL DEFAULT now(),\n    \"updated_at\" timestamptz NOT NULL DEFAULT now()\n)",
+    "CREATE TABLE \"auth_permission\" (\n    \"id\" bigint GENERATED BY DEFAULT AS IDENTITY PRIMARY KEY,\n    \"name\" varchar(255) NOT NULL,\n    \"app\" varchar(100) NOT NULL,\n    \"codename\" varchar(100) NOT NULL,\n    \"created_at\" timestamptz NOT NULL DEFAULT now(),\n    \"updated_at\" timestamptz NOT NULL DEFAULT now()\n)",
+    "CREATE TABLE \"auth_session\" (\n    \"id\" bigint GENERATED BY DEFAULT AS IDENTITY PRIMARY KEY,\n    \"key\" varchar(64) NOT NULL,\n    \"user_id\" bigint NOT NULL,\n    \"expires_at\" timestamptz NOT NULL,\n    \"created_at\" timestamptz NOT NULL DEFAULT now(),\n    \"updated_at\" timestamptz NOT NULL DEFAULT now()\n)",
+    "CREATE TABLE \"auth_user\" (\n    \"id\" bigint GENERATED BY DEFAULT AS IDENTITY PRIMARY KEY,\n    \"username\" varchar(150) NOT NULL,\n    \"email\" varchar(254) NOT NULL,\n    \"first_name\" varchar(150) NOT NULL,\n    \"last_name\" varchar(150) NOT NULL,\n    \"password\" varchar(255) NOT NULL,\n    \"is_active\" boolean NOT NULL DEFAULT true,\n    \"is_staff\" boolean NOT NULL DEFAULT false,\n    \"is_superuser\" boolean NOT NULL DEFAULT false,\n    \"last_login\" timestamptz,\n    \"created_at\" timestamptz NOT NULL DEFAULT now(),\n    \"updated_at\" timestamptz NOT NULL DEFAULT now()\n)",
+    "CREATE TABLE \"auth_user_groups\" (\n    \"id\" bigint GENERATED BY DEFAULT AS IDENTITY PRIMARY KEY,\n    \"user_id\" bigint NOT NULL,\n    \"group_id\" bigint NOT NULL,\n    \"created_at\" timestamptz NOT NULL DEFAULT now(),\n    \"updated_at\" timestamptz NOT NULL DEFAULT now()\n)",
+    "CREATE TABLE \"auth_user_permissions\" (\n    \"id\" bigint GENERATED BY DEFAULT AS IDENTITY PRIMARY KEY,\n    \"user_id\" bigint NOT NULL,\n    \"permission_id\" bigint NOT NULL,\n    \"created_at\" timestamptz NOT NULL DEFAULT now(),\n    \"updated_at\" timestamptz NOT NULL DEFAULT now()\n)",
+    "CREATE UNIQUE INDEX \"auth_group_name_key\" ON \"auth_group\" (\"name\")",
+    "CREATE INDEX \"auth_group_permissions_group_id_idx\" ON \"auth_group_permissions\" (\"group_id\")",
+    "CREATE INDEX \"auth_group_permissions_permission_id_idx\" ON \"auth_group_permissions\" (\"permission_id\")",
+    "CREATE UNIQUE INDEX \"auth_group_permissions_group_id_permission_id_uniq\" ON \"auth_group_permissions\" (\"group_id\", \"permission_id\")",
+    "CREATE UNIQUE INDEX \"auth_permission_app_codename_uniq\" ON \"auth_permission\" (\"app\", \"codename\")",
+    "CREATE UNIQUE INDEX \"auth_session_key_key\" ON \"auth_session\" (\"key\")",
+    "CREATE INDEX \"auth_session_user_id_idx\" ON \"auth_session\" (\"user_id\")",
+    "CREATE INDEX \"auth_session_expires_at_idx\" ON \"auth_session\" (\"expires_at\")",
+    "CREATE UNIQUE INDEX \"auth_user_username_key\" ON \"auth_user\" (\"username\")",
+    "CREATE INDEX \"auth_user_groups_user_id_idx\" ON \"auth_user_groups\" (\"user_id\")",
+    "CREATE INDEX \"auth_user_groups_group_id_idx\" ON \"auth_user_groups\" (\"group_id\")",
+    "CREATE UNIQUE INDEX \"auth_user_groups_user_id_group_id_uniq\" ON \"auth_user_groups\" (\"user_id\", \"group_id\")",
+    "CREATE INDEX \"auth_user_permissions_user_id_idx\" ON \"auth_user_permissions\" (\"user_id\")",
+    "CREATE INDEX \"auth_user_permissions_permission_id_idx\" ON \"auth_user_permissions\" (\"permission_id\")",
+    "CREATE UNIQUE INDEX \"auth_user_permissions_user_id_permission_id_uniq\" ON \"auth_user_permissions\" (\"user_id\", \"permission_id\")",
+    "ALTER TABLE \"auth_group_permissions\" ADD CONSTRAINT \"auth_group_permissions_group_id_fkey\" FOREIGN KEY (\"group_id\") REFERENCES \"auth_group\" (\"id\") ON DELETE CASCADE",
+    "ALTER TABLE \"auth_group_permissions\" ADD CONSTRAINT \"auth_group_permissions_permission_id_fkey\" FOREIGN KEY (\"permission_id\") REFERENCES \"auth_permission\" (\"id\") ON DELETE CASCADE",
+    "ALTER TABLE \"auth_session\" ADD CONSTRAINT \"auth_session_user_id_fkey\" FOREIGN KEY (\"user_id\") REFERENCES \"auth_user\" (\"id\") ON DELETE CASCADE",
+    "ALTER TABLE \"auth_user_groups\" ADD CONSTRAINT \"auth_user_groups_user_id_fkey\" FOREIGN KEY (\"user_id\") REFERENCES \"auth_user\" (\"id\") ON DELETE CASCADE",
+    "ALTER TABLE \"auth_user_groups\" ADD CONSTRAINT \"auth_user_groups_group_id_fkey\" FOREIGN KEY (\"group_id\") REFERENCES \"auth_group\" (\"id\") ON DELETE CASCADE",
+    "ALTER TABLE \"auth_user_permissions\" ADD CONSTRAINT \"auth_user_permissions_user_id_fkey\" FOREIGN KEY (\"user_id\") REFERENCES \"auth_user\" (\"id\") ON DELETE CASCADE",
+    "ALTER TABLE \"auth_user_permissions\" ADD CONSTRAINT \"auth_user_permissions_permission_id_fkey\" FOREIGN KEY (\"permission_id\") REFERENCES \"auth_permission\" (\"id\") ON DELETE CASCADE"
+  ],
+  "down": [
+    "ALTER TABLE \"auth_user_permissions\" DROP CONSTRAINT \"auth_user_permissions_permission_id_fkey\"",
+    "ALTER TABLE \"auth_user_permissions\" DROP CONSTRAINT \"auth_user_permissions_user_id_fkey\"",
+    "ALTER TABLE \"auth_user_groups\" DROP CONSTRAINT \"auth_user_groups_group_id_fkey\"",
+    "ALTER TABLE \"auth_user_groups\" DROP CONSTRAINT \"auth_user_groups_user_id_fkey\"",
+    "ALTER TABLE \"auth_session\" DROP CONSTRAINT \"auth_session_user_id_fkey\"",
+    "ALTER TABLE \"auth_group_permissions\" DROP CONSTRAINT \"auth_group_permissions_permission_id_fkey\"",
+    "ALTER TABLE \"auth_group_permissions\" DROP CONSTRAINT \"auth_group_permissions_group_id_fkey\"",
+    "DROP INDEX \"auth_user_permissions_user_id_permission_id_uniq\"",
+    "DROP INDEX \"auth_user_permissions_permission_id_idx\"",
+    "DROP INDEX \"auth_user_permissions_user_id_idx\"",
+    "DROP INDEX \"auth_user_groups_user_id_group_id_uniq\"",
+    "DROP INDEX \"auth_user_groups_group_id_idx\"",
+    "DROP INDEX \"auth_user_groups_user_id_idx\"",
+    "DROP INDEX \"auth_user_username_key\"",
+    "DROP INDEX \"auth_session_expires_at_idx\"",
+    "DROP INDEX \"auth_session_user_id_idx\"",
+    "DROP INDEX \"auth_session_key_key\"",
+    "DROP INDEX \"auth_permission_app_codename_uniq\"",
+    "DROP INDEX \"auth_group_permissions_group_id_permission_id_uniq\"",
+    "DROP INDEX \"auth_group_permissions_permission_id_idx\"",
+    "DROP INDEX \"auth_group_permissions_group_id_idx\"",
+    "DROP INDEX \"auth_group_name_key\"",
+    "DROP TABLE \"auth_user_permissions\"",
+    "DROP TABLE \"auth_user_groups\"",
+    "DROP TABLE \"auth_user\"",
+    "DROP TABLE \"auth_session\"",
+    "DROP TABLE \"auth_permission\"",
+    "DROP TABLE \"auth_group_permissions\"",
+    "DROP TABLE \"auth_group\""
+  ]
+}

@@ -1,0 +1,76 @@
+{{define "cell"}}
+{{- if eq .Kind "null"}}<span class="text-zinc-300 dark:text-zinc-600">—</span>
+{{- else if eq .Kind "bool"}}{{if .Bool}}<span class="inline-flex text-emerald-500" title="{{t "Yes"}}">{{icon "circle-check"}}</span>{{else}}<span class="inline-flex text-zinc-300 dark:text-zinc-600" title="{{t "No"}}">{{icon "circle-x"}}</span>{{end}}
+{{- else if eq .Kind "link"}}{{if .URL}}<a href="{{.URL}}" title="{{.Full}}" class="font-medium text-indigo-600 hover:text-indigo-500 hover:underline dark:text-indigo-400">{{.Text}}</a>{{else}}<span title="{{.Full}}">{{.Text}}</span>{{end}}
+{{- else if eq .Kind "choice"}}<span class="inline-flex items-center rounded-md bg-zinc-100 px-2 py-0.5 text-xs font-medium text-zinc-700 ring-1 ring-zinc-200 ring-inset dark:bg-zinc-800 dark:text-zinc-300 dark:ring-zinc-700">{{.Text}}</span>
+{{- else if eq .Kind "json"}}<code class="font-mono text-xs text-zinc-500" title="{{.Full}}">{{.Text}}</code>
+{{- else if eq .Kind "html"}}<div class="rich-text">{{.HTML}}</div>
+{{- else if eq .Kind "number"}}<span class="whitespace-nowrap tabular-nums" dir="ltr">{{.Text}}</span>
+{{- else if eq .Kind "datetime"}}<span class="whitespace-nowrap tabular-nums text-zinc-500 dark:text-zinc-400" title="{{.Full}}">{{.Text}}</span>
+{{- else}}<span title="{{.Full}}">{{.Text}}</span>{{end}}
+{{- end}}
+
+{{define "toasts"}}
+<div x-data="toasts({{json .Flashes}})" class="pointer-events-none fixed inset-x-0 top-0 z-[70] flex flex-col items-center gap-2 p-4 sm:items-end sm:p-6">
+  <template x-for="item in items" :key="item.id">
+    <div x-transition:enter="transition duration-200 ease-out" x-transition:enter-start="translate-y-2 opacity-0" x-transition:enter-end="translate-y-0 opacity-100"
+         class="pointer-events-auto flex w-full max-w-sm items-start gap-3 rounded-xl bg-white p-4 text-sm shadow-lg ring-1 ring-zinc-950/5 dark:bg-zinc-900 dark:ring-white/10">
+      <span class="mt-0.5" :class="{'text-emerald-500': item.level === 'success', 'text-rose-500': item.level === 'error', 'text-amber-500': item.level === 'warning', 'text-indigo-500': item.level === 'info'}">
+        <template x-if="item.level === 'success'"><span>{{icon "circle-check"}}</span></template>
+        <template x-if="item.level !== 'success'"><span>{{icon "info"}}</span></template>
+      </span>
+      <p class="flex-1 text-zinc-700 dark:text-zinc-200" x-text="item.message"></p>
+      <button type="button" @click="dismiss(item.id)" class="text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-200">{{icon "x"}}</button>
+    </div>
+  </template>
+</div>
+{{end}}
+
+{{define "palette"}}
+<div x-data="palette({{json .Palette}})" @open-palette.window="show()" @keydown.escape.window="open = false" x-cloak>
+  <div x-show="open" x-transition.opacity class="fixed inset-0 z-[60] bg-zinc-950/40 backdrop-blur-sm" @click="open = false"></div>
+  <div x-show="open" x-transition class="fixed inset-x-0 top-[12vh] z-[61] mx-auto w-full max-w-xl px-4">
+    <div class="overflow-hidden rounded-2xl bg-white shadow-2xl ring-1 ring-zinc-950/10 dark:bg-zinc-900 dark:ring-white/10">
+      <div class="flex items-center gap-3 border-b border-zinc-100 px-4 dark:border-zinc-800">
+        <span class="text-zinc-400">{{icon "search" "size-5"}}</span>
+        <input x-ref="input" x-model="search" @input="active = 0" @keydown.arrow-down.prevent="move(1)" @keydown.arrow-up.prevent="move(-1)" @keydown.enter.prevent="run()"
+               type="text" placeholder="{{t "Jump to a model, add an object…"}}" class="h-14 w-full border-0 bg-transparent text-sm outline-none placeholder:text-zinc-400 focus:ring-0">
+        <kbd class="kbd">esc</kbd>
+      </div>
+      <ul x-ref="list" class="max-h-80 overflow-y-auto p-2">
+        <template x-for="(item, index) in results" :key="item.label + item.hint">
+          <li :data-active="index === active" @mouseenter="active = index" @click="run(item)"
+              class="flex cursor-pointer items-center gap-3 rounded-lg px-3 py-2.5 text-sm"
+              :class="index === active ? 'bg-indigo-50 text-indigo-700 dark:bg-indigo-500/10 dark:text-indigo-300' : 'text-zinc-700 dark:text-zinc-300'">
+            <span class="grid size-7 place-items-center rounded-md bg-zinc-100 text-zinc-500 dark:bg-zinc-800 dark:text-zinc-400" x-html="item.svg"></span>
+            <span class="flex-1 truncate font-medium" x-text="item.label"></span>
+            <span class="text-xs text-zinc-400" x-text="item.hint"></span>
+          </li>
+        </template>
+        <li x-show="results.length === 0" class="px-3 py-8 text-center text-sm text-zinc-500">{{t "No results"}}</li>
+      </ul>
+    </div>
+  </div>
+</div>
+{{end}}
+
+{{define "confirm"}}
+<div x-data x-cloak x-show="$store.confirm.open" @keydown.escape.window="$store.confirm.open = false" class="fixed inset-0 z-[65] grid place-items-center p-4">
+  <div x-show="$store.confirm.open" x-transition.opacity class="absolute inset-0 bg-zinc-950/40 backdrop-blur-sm" @click="$store.confirm.open = false"></div>
+  <form x-show="$store.confirm.open" x-transition method="post" :action="$store.confirm.action"
+        class="relative w-full max-w-md rounded-2xl bg-white p-6 shadow-2xl ring-1 ring-zinc-950/10 dark:bg-zinc-900 dark:ring-white/10">
+    <template x-for="id in $store.confirm.ids" :key="id"><input type="hidden" name="ids" :value="id"></template>
+    <div class="flex gap-4">
+      <span class="grid size-10 shrink-0 place-items-center rounded-full bg-rose-100 text-rose-600 dark:bg-rose-500/10 dark:text-rose-400">{{icon "alert" "size-5"}}</span>
+      <div>
+        <h2 class="text-base font-semibold" x-text="$store.confirm.title"></h2>
+        <p class="mt-1 text-sm text-zinc-500 dark:text-zinc-400" x-text="$store.confirm.message"></p>
+      </div>
+    </div>
+    <div class="mt-6 flex justify-end gap-2">
+      <button type="button" class="button button-secondary" @click="$store.confirm.open = false">{{t "Cancel"}}</button>
+      <button type="submit" class="button button-danger" x-text="$store.confirm.button"></button>
+    </div>
+  </form>
+</div>
+{{end}}

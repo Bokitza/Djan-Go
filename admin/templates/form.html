@@ -1,0 +1,309 @@
+{{define "content"}}
+{{$page := .Page}}
+<div class="mb-6 flex flex-wrap items-center gap-4">
+  <span class="grid size-11 place-items-center rounded-xl bg-indigo-50 text-indigo-600 ring-1 ring-indigo-100 dark:bg-indigo-500/10 dark:text-indigo-300 dark:ring-indigo-500/20">{{icon $page.Meta.Icon "size-5"}}</span>
+  <div class="min-w-0 flex-1">
+    <p class="text-xs font-medium tracking-wide text-zinc-500 uppercase">{{if $page.IsNew}}{{tf "New %s" $page.Meta.Label}}{{else}}{{$page.Meta.Label}} #{{$page.ID}}{{end}}</p>
+    <h1 class="truncate text-2xl font-semibold tracking-tight">{{if $page.IsNew}}{{tf "Add %s" $page.Meta.Label}}{{else}}{{$page.ObjectLabel}}{{end}}</h1>
+  </div>
+  {{if not $page.Editable}}<span class="inline-flex items-center gap-1.5 rounded-full bg-amber-50 px-3 py-1 text-xs font-medium text-amber-700 ring-1 ring-amber-200 dark:bg-amber-500/10 dark:text-amber-300 dark:ring-amber-500/20">{{icon "lock" "size-3.5"}} {{t "Read only"}}</span>{{end}}
+</div>
+
+<div class="space-y-6">
+  {{if not $page.IsNew}}
+  <div class="card px-6 py-4">
+    <dl class="flex flex-wrap items-center gap-x-8 gap-y-2 text-sm">
+      <h2 class="font-semibold">{{t "Details"}}</h2>
+      <div class="flex gap-2"><dt class="text-zinc-500">{{t "ID"}}</dt><dd class="font-mono tabular-nums">{{$page.ID}}</dd></div>
+      <div class="flex gap-2"><dt class="text-zinc-500">{{t "Created"}}</dt><dd class="tabular-nums">{{$page.CreatedAt}}</dd></div>
+      <div class="flex gap-2"><dt class="text-zinc-500">{{t "Updated"}}</dt><dd class="tabular-nums">{{$page.UpdatedAt}}</dd></div>
+    </dl>
+    {{if $page.ReadOnlyNotes}}<p class="mt-3 rounded-lg bg-zinc-50 p-3 text-xs text-zinc-500 dark:bg-zinc-800/60">{{$page.ReadOnlyNotes}}</p>{{end}}
+  </div>
+  {{else}}
+  <div class="card flex flex-wrap items-center gap-x-3 gap-y-1 px-6 py-4 text-sm text-zinc-500">
+    <p class="flex items-center gap-2 font-medium text-zinc-900 dark:text-white">{{icon "info"}} {{tf "New %s" $page.Meta.Label}}</p>
+    <p>{{t "Fields marked with * are required."}}</p>
+  </div>
+  {{end}}
+
+  <form method="post" action="{{$page.Action}}" hx-post="{{$page.Action}}" hx-target="#main" hx-select="#main" hx-swap="outerHTML show:window:top"
+        novalidate>
+    {{if $page.Errors}}
+    <div class="mb-6 flex gap-3 rounded-xl bg-rose-50 p-4 text-sm text-rose-700 ring-1 ring-rose-200 dark:bg-rose-500/10 dark:text-rose-300 dark:ring-rose-500/20">
+      {{icon "alert" "size-5"}}
+      <div>{{range $page.Errors}}<p>{{.}}</p>{{end}}</div>
+    </div>
+    {{end}}
+
+    <div class="card divide-y divide-zinc-100 dark:divide-zinc-800">
+      <div class="grid gap-x-6 gap-y-6 p-6 sm:grid-cols-2">
+        {{range $page.Fields}}{{template "field" .}}{{end}}
+      </div>
+
+      {{range $page.Extras}}
+      <div class="p-6">{{template "extra" .}}</div>
+      {{end}}
+
+      {{if $page.Editable}}
+      <div class="sticky bottom-0 flex flex-wrap items-center justify-end gap-2 rounded-b-2xl bg-white/90 px-6 py-4 backdrop-blur dark:bg-zinc-900/90">
+        <a href="{{$page.Meta.URL}}" class="button button-ghost me-auto">{{t "Cancel"}}</a>
+        {{if $page.Meta.AddURL}}<button type="submit" name="_action" value="another" class="button button-secondary">{{t "Save and add another"}}</button>{{end}}
+        <button type="submit" name="_action" value="continue" class="button button-secondary">{{t "Save and continue"}}</button>
+        <button type="submit" name="_action" value="save" class="button button-primary">
+          <span class="htmx-indicator -ms-1 size-4 animate-spin rounded-full border-2 border-white/40 border-t-white"></span>
+          {{t "Save"}}
+        </button>
+      </div>
+      {{end}}
+    </div>
+  </form>
+
+  {{if and (not $page.IsNew) $page.CanDelete}}
+  <div class="card flex flex-wrap items-center justify-between gap-4 p-6 ring-rose-200/60 dark:ring-rose-500/20">
+    <div>
+      <h2 class="text-sm font-semibold text-rose-600 dark:text-rose-400">{{t "Danger zone"}}</h2>
+      <p class="mt-1 text-sm text-zinc-500">{{tf "Deleting this %s cannot be undone." $page.Meta.Label}}</p>
+    </div>
+    <button type="button" class="button button-danger" data-action="{{$page.DeleteURL}}" data-title="{{tf "Delete “%s”?" $page.ObjectLabel}}" data-message="{{t "This cannot be undone."}}"
+            @click="$store.confirm.ask({title: $el.dataset.title, message: $el.dataset.message, action: $el.dataset.action})">
+      {{icon "trash"}} {{tf "Delete %s" $page.Meta.Label}}
+    </button>
+  </div>
+  {{end}}
+</div>
+{{end}}
+
+{{define "label"}}
+<label for="field-{{.Name}}" class="mb-1.5 block text-sm font-medium text-zinc-800 dark:text-zinc-200">{{.Label}}{{if .Required}}<span class="text-rose-500"> *</span>{{end}}</label>
+{{end}}
+
+{{define "fieldFooter"}}
+{{if .Error}}<p class="mt-1.5 flex items-center gap-1 text-xs text-rose-600 dark:text-rose-400">{{icon "alert" "size-3.5"}} {{.Error}}</p>
+{{else if .Help}}<p class="mt-1.5 text-xs text-zinc-500">{{.Help}}</p>{{end}}
+{{end}}
+
+{{define "field"}}
+<div class="{{if or .Wide (eq .Widget "fk")}}sm:col-span-2{{end}}">
+  {{if eq .Widget "checkbox"}}
+  <label class="flex cursor-pointer items-start gap-3 rounded-xl p-3 ring-1 ring-zinc-200 transition hover:bg-zinc-50 has-[:checked]:bg-indigo-50/50 has-[:checked]:ring-indigo-200 dark:ring-zinc-800 dark:hover:bg-zinc-800/40 dark:has-[:checked]:bg-indigo-500/5 dark:has-[:checked]:ring-indigo-500/30">
+    <input type="checkbox" id="field-{{.Name}}" name="{{.Name}}" value="true" {{if .Checked}}checked{{end}} class="mt-0.5 size-4 rounded border-zinc-300 text-indigo-600 focus:ring-indigo-500 dark:border-zinc-600 dark:bg-zinc-800">
+    <span>
+      <span class="block text-sm font-medium text-zinc-800 dark:text-zinc-200">{{.Label}}</span>
+      {{if .Help}}<span class="block text-xs text-zinc-500">{{.Help}}</span>{{end}}
+    </span>
+  </label>
+  {{if .Error}}<p class="mt-1.5 text-xs text-rose-600">{{.Error}}</p>{{end}}
+
+  {{else if eq .Widget "readonly"}}
+  <p class="mb-1.5 block text-sm font-medium text-zinc-500">{{.Label}}</p>
+  <div class="min-h-9 rounded-lg bg-zinc-50 px-3 py-2 text-sm dark:bg-zinc-800/50">{{template "cell" .Display}}</div>
+
+  {{else}}
+  {{template "label" .}}
+  {{template "control" .}}
+  {{template "fieldFooter" .}}
+  {{end}}
+</div>
+{{end}}
+
+{{define "control"}}
+  {{if eq .Widget "textarea"}}
+  <textarea id="field-{{.Name}}" name="{{.Name}}" rows="6" class="input {{if .Error}}input-error{{end}}">{{.Value}}</textarea>
+
+  {{else if eq .Widget "richtext"}}
+  <rich-text-editor class="rich-text-editor {{if .Error}}input-error{{end}}" data-link-prompt="{{t "Link URL"}}" data-tiptap="{{static "tiptap.min.js"}}">
+    <input type="hidden" id="field-{{.Name}}" name="{{.Name}}" value="{{.Value}}">
+    <div class="flex flex-wrap items-center gap-0.5 border-b border-zinc-200 p-1 dark:border-zinc-700" role="toolbar">
+      <button type="button" data-command="bold" title="{{t "Bold"}}" class="rich-text-button">{{icon "bold"}}</button>
+      <button type="button" data-command="italic" title="{{t "Italic"}}" class="rich-text-button">{{icon "italic"}}</button>
+      <button type="button" data-command="underline" title="{{t "Underline"}}" class="rich-text-button">{{icon "underline"}}</button>
+      <button type="button" data-command="strike" title="{{t "Strikethrough"}}" class="rich-text-button">{{icon "strikethrough"}}</button>
+      <span class="mx-1 h-5 w-px bg-zinc-200 dark:bg-zinc-700"></span>
+      <button type="button" data-command="heading2" title="{{t "Heading"}}" class="rich-text-button">{{icon "heading-2"}}</button>
+      <button type="button" data-command="heading3" title="{{t "Subheading"}}" class="rich-text-button">{{icon "heading-3"}}</button>
+      <button type="button" data-command="bulletList" title="{{t "Bulleted list"}}" class="rich-text-button">{{icon "list"}}</button>
+      <button type="button" data-command="orderedList" title="{{t "Numbered list"}}" class="rich-text-button">{{icon "list-ordered"}}</button>
+      <button type="button" data-command="blockquote" title="{{t "Quote"}}" class="rich-text-button">{{icon "quote"}}</button>
+      <button type="button" data-command="codeBlock" title="{{t "Code block"}}" class="rich-text-button">{{icon "code"}}</button>
+      <button type="button" data-command="link" title="{{t "Link"}}" class="rich-text-button">{{icon "link"}}</button>
+      <span class="mx-1 h-5 w-px bg-zinc-200 dark:bg-zinc-700"></span>
+      <button type="button" data-command="undo" title="{{t "Undo"}}" class="rich-text-button">{{icon "undo" "size-4 shrink-0 rtl:-scale-x-100"}}</button>
+      <button type="button" data-command="redo" title="{{t "Redo"}}" class="rich-text-button">{{icon "redo" "size-4 shrink-0 rtl:-scale-x-100"}}</button>
+    </div>
+    <div data-editor></div>
+  </rich-text-editor>
+  <script type="module" src="{{static "richtext.js"}}"></script>
+
+  {{else if eq .Widget "json"}}
+  <textarea id="field-{{.Name}}" name="{{.Name}}" rows="8" spellcheck="false" class="input font-mono text-xs {{if .Error}}input-error{{end}}">{{.Value}}</textarea>
+
+  {{else if eq .Widget "select"}}
+  <select id="field-{{.Name}}" name="{{.Name}}" class="input pe-8 {{if .Error}}input-error{{end}}">
+    {{range .Choices}}<option value="{{.Value}}" {{if .Selected}}selected{{end}}>{{.Label}}</option>{{end}}
+  </select>
+
+  {{else if eq .Widget "fk"}}
+  <div x-data="combobox({{json .Value}}, {{json .SelectedLabel}})" class="relative" @click.outside="open = false">
+    <input type="hidden" name="{{.Name}}" :value="value">
+    <button type="button" @click="open = !open; $nextTick(() => $refs.search.focus())"
+            class="input flex items-center justify-between text-start {{if .Error}}input-error{{end}}">
+      <span x-show="label" x-text="label" class="truncate"></span>
+      <span x-show="!label" class="text-zinc-400">{{t "Select…"}}</span>
+      <span class="flex items-center gap-1 text-zinc-400">
+        {{if .Nullable}}<span x-show="value" @click.stop="clear()" class="rounded p-0.5 hover:bg-zinc-100 hover:text-zinc-700 dark:hover:bg-zinc-800">{{icon "x" "size-3.5"}}</span>{{end}}
+        {{icon "chevrons-sort" "size-3.5"}}
+      </span>
+    </button>
+    <div x-cloak x-show="open" x-transition.origin.top class="absolute z-20 mt-2 w-full rounded-xl bg-white p-1.5 shadow-lg ring-1 ring-zinc-950/10 dark:bg-zinc-900 dark:ring-white/10">
+      <div class="relative mb-1">
+        <span class="pointer-events-none absolute inset-y-0 start-3 flex items-center text-zinc-400">{{icon "search" "size-3.5"}}</span>
+        <input x-ref="search" type="search" name="q" autocomplete="off" placeholder="{{t "Type to search…"}}"
+               hx-get="{{.AutocompleteURL}}" hx-trigger="focus once, input changed delay:200ms" hx-target="next [data-options]" hx-swap="innerHTML"
+               class="w-full rounded-lg border-0 bg-zinc-50 py-2 pe-3 ps-8 text-sm ring-0 outline-none focus:ring-2 focus:ring-indigo-500 dark:bg-zinc-800">
+      </div>
+      <div data-options class="max-h-60 overflow-y-auto">
+        <p class="px-3 py-6 text-center text-sm text-zinc-500">{{t "Loading…"}}</p>
+      </div>
+    </div>
+  </div>
+
+  {{else}}
+  <input type="{{.InputType}}" id="field-{{.Name}}" name="{{.Name}}" value="{{.Value}}" {{if .MaxLength}}maxlength="{{.MaxLength}}"{{end}} {{if .Step}}step="{{.Step}}"{{end}}
+         class="input {{if .Error}}input-error{{end}}">
+  {{end}}
+{{end}}
+
+{{define "extra"}}
+<div class="mb-3 flex items-center justify-between gap-3">
+  <div>
+    <h3 class="flex items-center gap-2 text-sm font-semibold">{{.Label}}{{if .Required}}<span class="text-rose-500">*</span>{{end}}
+      {{if eq .Widget "checkboxes"}}<span class="rounded-full bg-zinc-100 px-2 py-0.5 text-xs font-medium text-zinc-600 tabular-nums dark:bg-zinc-800 dark:text-zinc-300">{{.Count}} {{t "selected"}}</span>{{end}}
+    </h3>
+    {{if .Help}}<p class="mt-0.5 text-xs text-zinc-500">{{.Help}}</p>{{end}}
+  </div>
+</div>
+{{if .Error}}<p class="mb-3 flex items-center gap-1 text-xs text-rose-600 dark:text-rose-400">{{icon "alert" "size-3.5"}} {{.Error}}</p>{{end}}
+
+{{if eq .Widget "password"}}
+  {{if .ReadOnly}}<p class="text-sm text-zinc-500">{{t "You can't change this password."}}</p>{{else}}
+  <div class="grid gap-4 sm:grid-cols-2">
+    <input type="password" name="{{.Name}}" autocomplete="new-password" placeholder="{{t "New password"}}" class="input {{if .Error}}input-error{{end}}">
+    <input type="password" name="{{.Name}}_confirm" autocomplete="new-password" placeholder="{{t "Confirm password"}}" class="input {{if .Error}}input-error{{end}}">
+  </div>
+  {{end}}
+{{else if eq .Widget "checkboxes"}}
+  <div x-data="{ filter: '' }">
+    <div class="relative mb-3">
+      <span class="pointer-events-none absolute inset-y-0 start-3 flex items-center text-zinc-400">{{icon "search" "size-3.5"}}</span>
+      <input type="search" x-model="filter" placeholder="{{t "Filter…"}}" class="input py-1.5 ps-8 text-xs" form="none">
+    </div>
+    <div class="max-h-72 space-y-4 overflow-y-auto rounded-xl p-1 ring-1 ring-zinc-200 dark:ring-zinc-800">
+      {{$name := .Name}}{{$readonly := .ReadOnly}}
+      {{range .Groups}}
+      <div>
+        {{if .Label}}<p class="sticky top-0 bg-white px-2 py-1 text-[11px] font-semibold tracking-wider text-zinc-400 uppercase dark:bg-zinc-900">{{.Label}}</p>{{end}}
+        <div class="grid gap-0.5 sm:grid-cols-2">
+          {{range .Options}}
+          <label data-label="{{.Label}}" x-show="!filter || $el.dataset.label.toLowerCase().includes(filter.toLowerCase())"
+                 class="flex cursor-pointer items-center gap-2 rounded-lg px-2 py-1.5 text-sm hover:bg-zinc-50 dark:hover:bg-zinc-800/60 {{if $readonly}}cursor-default opacity-70{{end}}">
+            <input type="checkbox" name="{{$name}}" value="{{.Value}}" {{if .Checked}}checked{{end}} {{if $readonly}}disabled{{end}}
+                   class="size-4 rounded border-zinc-300 text-indigo-600 focus:ring-indigo-500 dark:border-zinc-600 dark:bg-zinc-800">
+            <span class="truncate">{{.Label}}</span>
+          </label>
+          {{end}}
+        </div>
+      </div>
+      {{else}}
+      <p class="px-3 py-6 text-center text-sm text-zinc-500">{{t "Nothing to choose from yet."}}</p>
+      {{end}}
+    </div>
+  </div>
+{{else if eq .Widget "inline"}}
+  {{template "inline" .Inline}}
+{{end}}
+{{end}}
+
+{{define "inline"}}
+<div x-data="inlineFormset({{.Total}})">
+  <input type="hidden" name="{{.TotalName}}" value="{{.Total}}" :value="total">
+  {{if .Stacked}}
+  <div x-ref="rows" class="space-y-4">
+    {{range .Rows}}{{template "inlineStacked" .}}{{end}}
+  </div>
+  {{if .Empty}}<template x-ref="template">{{template "inlineStacked" .Empty}}</template>{{end}}
+  {{else}}
+  <div class="rounded-xl ring-1 ring-zinc-200 dark:ring-zinc-800">
+    <table class="w-full text-sm">
+      <thead>
+        <tr class="border-b border-zinc-200 dark:border-zinc-800">
+          {{range .Headers}}
+          <th class="px-2 py-2 text-start text-xs font-medium text-zinc-500" {{if .Help}}title="{{.Help}}"{{end}}>{{.Label}}{{if .Required}}<span class="text-rose-500"> *</span>{{end}}</th>
+          {{end}}
+          <th class="w-px"></th>
+        </tr>
+      </thead>
+      <tbody x-ref="rows" class="divide-y divide-zinc-100 dark:divide-zinc-800">
+        {{range .Rows}}{{template "inlineTabular" .}}{{end}}
+      </tbody>
+    </table>
+  </div>
+  {{if .Empty}}<template x-ref="template">{{template "inlineTabular" .Empty}}</template>{{end}}
+  {{end}}
+  {{if and (not .Rows) (not .Empty)}}<p class="px-3 py-6 text-center text-sm text-zinc-500">{{t "Nothing here yet."}}</p>{{end}}
+  {{if .Empty}}
+  <button type="button" @click="add()" class="button button-secondary mt-3">{{icon "plus"}} {{.AddLabel}}</button>
+  {{end}}
+</div>
+{{end}}
+
+{{define "inlineErrors"}}
+{{if .Errors}}<div class="flex gap-2 rounded-lg bg-rose-50 p-2 text-xs text-rose-700 dark:bg-rose-500/10 dark:text-rose-300">{{icon "alert" "size-3.5"}}<div>{{range .Errors}}<p>{{.}}</p>{{end}}</div></div>{{end}}
+{{end}}
+
+{{define "inlineActions"}}
+<input type="hidden" name="{{.Key}}id" value="{{if .ID}}{{.ID}}{{end}}">
+<div class="flex items-center justify-end gap-3">
+  {{if .URL}}<a href="{{.URL}}" title="{{t "Edit"}}" class="text-zinc-400 hover:text-indigo-600 dark:hover:text-indigo-400">{{icon "pencil"}}</a>{{end}}
+  {{if .CanDelete}}
+  <label class="inline-flex cursor-pointer items-center gap-1.5 text-xs text-zinc-500">
+    <input type="checkbox" name="{{.Key}}DELETE" value="on" {{if .Deleted}}checked{{end}} class="size-4 rounded border-zinc-300 text-rose-600 focus:ring-rose-500 dark:border-zinc-600 dark:bg-zinc-800">
+    {{t "Delete"}}
+  </label>
+  {{else if .New}}
+  <button type="button" title="{{t "Remove"}}" @click="$el.closest('[data-inline-row]').remove()" class="text-zinc-400 hover:text-rose-600">{{icon "x"}}</button>
+  {{end}}
+</div>
+{{end}}
+
+{{define "inlineTabular"}}
+<tr data-inline-row class="align-top">
+  {{range .Fields}}
+  <td class="px-2 py-2">
+    {{if eq .Widget "checkbox"}}<input type="checkbox" id="field-{{.Name}}" name="{{.Name}}" value="true" {{if .Checked}}checked{{end}} class="mt-2.5 size-4 rounded border-zinc-300 text-indigo-600 focus:ring-indigo-500 dark:border-zinc-600 dark:bg-zinc-800">
+    {{else if eq .Widget "readonly"}}<div class="py-2">{{template "cell" .Display}}</div>
+    {{else}}{{template "control" .}}{{end}}
+    {{if .Error}}<p class="mt-1 text-xs text-rose-600 dark:text-rose-400">{{.Error}}</p>{{end}}
+  </td>
+  {{end}}
+  <td class="px-2 py-2 pt-4 whitespace-nowrap">
+    {{template "inlineActions" .}}
+    {{template "inlineErrors" .}}
+  </td>
+</tr>
+{{end}}
+
+{{define "inlineStacked"}}
+<div data-inline-row class="rounded-xl ring-1 ring-zinc-200 dark:ring-zinc-800">
+  <div class="flex items-center justify-between gap-3 border-b border-zinc-100 px-4 py-2.5 dark:border-zinc-800">
+    <p class="truncate text-sm font-medium">{{.Label}}</p>
+    {{template "inlineActions" .}}
+  </div>
+  <div class="space-y-4 p-4">
+    {{template "inlineErrors" .}}
+    <div class="grid gap-x-6 gap-y-5 sm:grid-cols-2">
+      {{range .Fields}}{{template "field" .}}{{end}}
+    </div>
+  </div>
+</div>
+{{end}}
